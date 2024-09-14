@@ -15,7 +15,7 @@ If you just want to be able to run `.py` files, do the following:
 I would suggest the use of a python venv for package management. [Conda Docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html), and [Example Venv Setups](https://janakiev.com/blog/jupyter-virtual-envs/) might be helpful.
 
 
-## Advanced Setup - SSH Keys, VSCode, Jupyter Notebooks
+## Advanced Setup - SSH Keys, Conda Environment, Jupyter Notebooks
 
 ### SSH Keys
 1. On your local machine, generate an SSH Key with `ssh-keygen -t rsa -b 4096`
