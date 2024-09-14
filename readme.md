@@ -1,5 +1,7 @@
 # Cuda-Q for 551
 
+Repo Link: [https://github.com/collinsjacob127/cudaq](https://github.com/collinsjacob127/cudaq)
+
 ## Simple Installation (Only .py files)
 
 Guides for setting up a Cuda-Q python environment can be found [here](https://nvidia.github.io/cuda-quantum/latest/using/quick_start.html)
