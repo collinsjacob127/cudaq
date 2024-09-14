@@ -12,8 +12,10 @@ If you just want to be able to run `.py` files, do the following:
 1. Ensure you are connected to the GlobalProtect VPN (instructions [here](https://support.csuchico.edu/TDClient/1984/Portal/KB/?CategoryID=15690))
 2. `ssh username@cscigpu.csuchico.edu`
     - Enter your password after OK-ing the signature.
-3. `python -m pip install cuda-quantum` 
-4. Try running program.py with `python program.py`
+3. `git clone https://github.com/collinsjacob127/cudaq`
+4. `cd cudaq`
+5. `python -m pip install cuda-quantum` 
+6. Try running program.py with `python program.py`
 
 I would suggest the use of a python venv for package management. [Conda Docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html), and [Example Venv Setups](https://janakiev.com/blog/jupyter-virtual-envs/) might be helpful.
 
@@ -33,7 +35,8 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 1. Python environment set up: `conda env create --name cudaq --file=environment.yml`
     - If **cuda-quantum** and **contfrac** won't install through conda, run `conda run -n cudaq pip install cuda-quantum contfrac`
 2. Python environment activated: `conda activate cudaq`
-3. Verify ipykernel is installed: `pip install --user ipykernel`
+3. Verify ipykernel is installed: `conda run -n cudaq python -m pip install --user ipykernel`
+    - Should display "Requirement already satisfied: ..."
 4. Add python environment to Jupyter Server: `python -m ipykernel install --user --name=cudaq`
 
 ### Load Jupyter Server from Remote
