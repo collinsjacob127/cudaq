@@ -25,7 +25,8 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 5. Open `~/.ssh/authorized_keys` and paste the contents of your **id_rsa.pub** to a new line.
 6. Now your machine can ssh into cscigpu more easily.
 
-### Conda Environment
+### Conda Environment (on cscigpu)
+0. If you would rather install on your local machine, check resources at the bottom of the page.
 1. Python environment set up: `conda create -n cudaq --file requirements.txt`
     - If **cuda-quantum** and **contfrac** won't install through conda, run `conda run -n cudaq pip install cuda-quantum contfrac`
 2. Python environment activated: `conda activate cudaq`
@@ -51,5 +52,6 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 2. [Cuda-Q: Quick Start](https://nvidia.github.io/cuda-quantum/latest/using/quick_start.html) 
 3. [Cuda-Q: Academic Repo](https://github.com/NVIDIA/cuda-q-academic)
 4. [Conda: Managing Environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment)
-5. [SSH Using VSCode](https://help.rc.ufl.edu/doc/SSH_Using_VS_Code)
-6. [StackOverflow: Accessing Jupyter Server on a remote machine](https://stackoverflow.com/questions/69244218/how-to-run-a-jupyter-notebook-through-a-remote-server-on-local-machine)
+5. [Conda: Installation](https://docs.conda.io/projects/conda/en/4.6.1/user-guide/install/linux.html)
+6. [SSH Using VSCode](https://help.rc.ufl.edu/doc/SSH_Using_VS_Code)
+7. [StackOverflow: Accessing Jupyter Server on a remote machine](https://stackoverflow.com/questions/69244218/how-to-run-a-jupyter-notebook-through-a-remote-server-on-local-machine)
