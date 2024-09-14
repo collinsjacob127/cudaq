@@ -27,7 +27,7 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 
 ### Conda Environment (on cscigpu)
 0. If you would rather install on your local machine, check resources at the bottom of the page.
-1. Python environment set up: `conda create -n cudaq --file requirements.txt`
+1. Python environment set up: `conda env create --name cudaq --file=environment.yml`
     - If **cuda-quantum** and **contfrac** won't install through conda, run `conda run -n cudaq pip install cuda-quantum contfrac`
 2. Python environment activated: `conda activate cudaq`
 3. Verify ipykernel is installed: `pip install --user ipykernel`
