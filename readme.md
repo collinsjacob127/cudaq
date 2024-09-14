@@ -1,7 +1,8 @@
 # Cuda-Q for 551
 
 Repo Link: [https://github.com/collinsjacob127/cudaq](https://github.com/collinsjacob127/cudaq)
-Contact Info: Jacob Collins: jbcollins@csuchico.edu
+
+Contact Info: Jacob Collins | jbcollins@csuchico.edu
 
 ## Simple Installation (Only .py files)
 
