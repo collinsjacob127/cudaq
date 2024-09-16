@@ -25,14 +25,16 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 
 ## Advanced Setup - SSH Keys, Conda Environment, Jupyter Notebooks
 
-** Note: Users on cscigpu have a 2GB quota of storage, and installing the conda environment uses around 1.9GB of that, so be careful about your storage quota after this is set up.**
+**Note: Users on cscigpu have a 2GB quota of storage, and installing the conda environment uses around 1.9GB of that, so be careful about your storage quota after this is set up.**
+
+**Seeing as cscigpu does not have enough storage for users to use Python Notebook files, I suggest using Google Colab instead. See [here](https://colab.research.google.com/github/collinsjacob127/cudaq/blob/main/Shors.ipynb#scrollTo=7dd05729) for an example, including how to install cuda-quantum, etc. on Google Colab**
 
 You can run `conda remove --name cudaq --all` to delete your environment, if you start getting errors from the server that say write space is full.
 
 Use `du -sh <DIR_NAME>` to check how much storage a folder is using, this can be helpful for figuring out what needs to be deleted if you run out of storage. I found that ~/.local/lib was using 
 around  5GB from testing various install methods (raw pip, other venvs, etc). You can also use `conda clean --all` to delete your conda cache and installed packages as well.
 
-
+> ### Do Not Use the Following Instructions on CSCIGPU, as we do not have enough storage per user to support this.
 ### SSH Keys
 1. On your local machine, generate an SSH Key with `ssh-keygen -t rsa -b 4096`
 2. Keep track of where **id_rsa** and **id_rsa.pub** are saved.
@@ -41,7 +43,7 @@ around  5GB from testing various install methods (raw pip, other venvs, etc). Yo
 5. Open `~/.ssh/authorized_keys` and paste the contents of your **id_rsa.pub** to a new line.
 6. Now your machine can ssh into cscigpu more easily.
 
-### Conda Environment (on cscigpu)
+### Conda Environment (on cscigpu - Not enough storage)
 0. If you would rather install on your local machine, check resources at the bottom of the page.
 1. Python environment set up: `conda env create --name cudaq --file=environment.yml`
     - If **cuda-quantum** and **contfrac** won't install through conda, run `conda run -n cudaq pip install cuda-quantum contfrac`
@@ -50,7 +52,7 @@ around  5GB from testing various install methods (raw pip, other venvs, etc). Yo
     - Should display "Requirement already satisfied: ..."
 4. Add python environment to Jupyter Server: `python -m ipykernel install --user --name=cudaq`
 
-### Load Jupyter Server from Remote
+### Load Jupyter Server from Remote  (Not enough storage)
 1. After everything else has been set up and your environment is activated, do the following
 2. On cscigpu, run `jupyter notebook --no-browser --port=8080`
 3. On a seperate terminal in your local machine, set up an ssh tunnel:
