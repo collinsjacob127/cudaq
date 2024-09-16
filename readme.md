@@ -25,6 +25,14 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 
 ## Advanced Setup - SSH Keys, Conda Environment, Jupyter Notebooks
 
+** Note: Users on cscigpu have a 2GB quota of storage, and installing the conda environment uses around 1.9GB of that, so be careful about your storage quota after this is set up.**
+
+You can run `conda remove --name cudaq --all` to delete your environment, if you start getting errors from the server that say write space is full.
+
+Use `du -sh <DIR_NAME>` to check how much storage a folder is using, this can be helpful for figuring out what needs to be deleted if you run out of storage. I found that ~/.local/lib was using 
+around  5GB from testing various install methods (raw pip, other venvs, etc). You can also use `conda clean --all` to delete your conda cache and installed packages as well.
+
+
 ### SSH Keys
 1. On your local machine, generate an SSH Key with `ssh-keygen -t rsa -b 4096`
 2. Keep track of where **id_rsa** and **id_rsa.pub** are saved.
@@ -64,3 +72,6 @@ I would suggest the use of a python venv for package management. [Conda Docs](ht
 5. [Conda: Installation](https://docs.conda.io/projects/conda/en/4.6.1/user-guide/install/linux.html)
 6. [SSH Using VSCode](https://help.rc.ufl.edu/doc/SSH_Using_VS_Code)
 7. [StackOverflow: Accessing Jupyter Server on a remote machine](https://stackoverflow.com/questions/69244218/how-to-run-a-jupyter-notebook-through-a-remote-server-on-local-machine)
+8. [Storage Quota: Using `du`](https://chtc.cs.wisc.edu/uw-research-computing/check-quota)
+9. [Storage Quota: Conda Clean](https://docs.conda.io/projects/conda/en/latest/commands/clean.html)
+
