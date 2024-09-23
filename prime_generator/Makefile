@@ -6,7 +6,7 @@ EXE = a.out
 FILENAME = generate_primes.cpp
 CFLAGS = -Wall -g
 CXXFLAGS = -Wall
-LDLIBS = 
+LDLIBS = bignum.cpp
 CC = gcc
 CXX = g++
 

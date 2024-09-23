@@ -1,0 +1,47 @@
+/* Header file for BigNum class, used to work with
+ * numbers larger than available with standard types.
+ * Author: Jacob Collins
+ * Sources: Much of this code was written with assistance
+ *          from ChatGPT 
+ */
+#ifndef BIGNUM_H
+#define BIGNUM_H
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <stdexcept>
+#include <sstream>
+#include <iomanip>
+#include <cstdint>
+
+class BigNum {
+public:
+    std::vector<uint64_t> data;
+    static const uint64_t BASE = 1ULL << 32; // Base is 2^32 to fit within a uint64_t
+
+    BigNum(uint64_t value = 0);
+    BigNum(const std::string& str);
+
+    std::string toString() const;
+    int toInt() const;
+    BigNum operator+(const BigNum& other) const;
+    BigNum operator-(const BigNum& other) const;
+    BigNum operator*(const BigNum& other) const;
+    BigNum operator/(const BigNum& other) const;
+    BigNum operator%(const BigNum& other) const;
+    BigNum operator<<(int shift) const;
+
+    bool operator<(const BigNum& other) const;
+    bool operator<=(const BigNum& other) const;
+    bool operator>(const BigNum& other) const;
+    bool operator>=(const BigNum& other) const;
+    bool operator==(const BigNum& other) const;
+    bool operator!=(const BigNum& other) const;
+
+private:
+    uint64_t divideSingleDigit(const BigNum& other) const;
+    BigNum fromString(const std::string& str);
+};
+
+#endif // BIGNUM_H
