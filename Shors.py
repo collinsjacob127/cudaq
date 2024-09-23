@@ -154,6 +154,7 @@ start_time = start_timer(title)
 shors_algorithm(my_integer, initial_value_to_start, False)
 end_timer(title, start_time)
 ### END TESTING FUNCTIONS ###
+exit()
 
 
 # Define kernels for the quantum Fourier transform and the inverse quantum Fourier transform
@@ -389,7 +390,6 @@ def find_order_quantum(a, N):
     Returns
     r: int the period if it is found, or None if no period is found
     -------
-    
     """
 
     if (a == 4 and N == 21) or (a == 5 and N == 21):
