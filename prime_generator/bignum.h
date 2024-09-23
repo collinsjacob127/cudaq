@@ -24,7 +24,7 @@ public:
     BigNum(const std::string& str);
 
     std::string toString() const;
-    int toInt() const;
+    // int toInt() const;
     BigNum operator+(const BigNum& other) const;
     BigNum operator-(const BigNum& other) const;
     BigNum operator*(const BigNum& other) const;

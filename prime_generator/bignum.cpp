@@ -27,10 +27,10 @@ std::string BigNum::toString() const {
     return ss.str();
 }
 
-int BigNum::toInt() const {
-    // Assume you have a valid range check in place
-    return (data.size() > 0) ? data[0] : 0; // Simplified for a single block BigNum
-}
+// int BigNum::toInt() const {
+//     // Assume you have a valid range check in place
+//     return (data.size() > 0) ? data[0] : 0; // Simplified for a single block BigNum
+// }
 
 BigNum BigNum::operator+(const BigNum& other) const {
     BigNum result;

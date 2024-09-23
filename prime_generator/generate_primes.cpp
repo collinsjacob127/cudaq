@@ -24,15 +24,7 @@ void print_progress_bar(float percentage) {
     std::cout.flush();
 }
 
-void segmented_sieve(BigNum low, BigNum high, const std::vector<BigNum>& small_primes, int n_bits, int segment_size) {
-    // Calculate total segments
-    BigNum total_numbers = high - low + BigNum(1); // Total numbers in the range
-    BigNum total_segments = total_numbers / BigNum(segment_size);
-    if (total_numbers % BigNum(segment_size) != BigNum(0)) {
-        total_segments = total_segments + BigNum(1); // Add one more segment if there's a remainder
-    }
-
-    // Existing code for the segmented sieve
+void segmented_sieve(BigNum low, BigNum high, const std::vector<BigNum>& small_primes, int n_bits) {
     BigNum size = high - low + BigNum(1);
     std::vector<uint8_t> is_prime((size.data[0] + 7) / 8, 0xFF);
 
@@ -40,8 +32,6 @@ void segmented_sieve(BigNum low, BigNum high, const std::vector<BigNum>& small_p
         BigNum start = std::max(prime * prime, (low + prime - BigNum(1)) / prime * prime);
         for (BigNum j = start; j <= high; j = j + prime) {
             if (j >= low) {
-                // Use a mutex here to safely modify shared memory
-                std::lock_guard<std::mutex> lock(file_mutex);
                 is_prime[(j - low).data[0] / 8] &= ~(1 << ((j - low).data[0] % 8));
             }
         }
@@ -60,10 +50,6 @@ void segmented_sieve(BigNum low, BigNum high, const std::vector<BigNum>& small_p
     file.open(filename, std::ios::app);
     file << result_buffer.str();
     file.close();
-    // Update progress
-    progress.fetch_add(1);
-    float percentage = static_cast<float>(progress.load()) / static_cast<float>(total_segments.toInt());
-    print_progress_bar(percentage);
 }
 
 void generate_primes(BigNum limit, int num_threads, int n_bits) {
@@ -90,10 +76,7 @@ void generate_primes(BigNum limit, int num_threads, int n_bits) {
         BigNum low = segment;
         BigNum high = std::min(segment + segment_size - BigNum(1), limit);
 
-        // threads.push_back(std::thread(segmented_sieve, low, high, std::ref(small_primes), n_bits, segment_size));
-        // Assuming 'low', 'high', and 'small_primes' are defined appropriately
-        threads.push_back(std::thread(segmented_sieve, std::ref(low), std::ref(high), std::ref(small_primes), n_bits, segment_size));
-
+        threads.push_back(std::thread(segmented_sieve, low, high, std::ref(small_primes), n_bits));
     }
 
     for (auto& t : threads) {
@@ -108,7 +91,7 @@ int main() {
 
     int num_bits = 16;
     BigNum limit = BigNum(1) << num_bits;  // Fix for left shift operator
-    int num_threads = 4;
+    int num_threads = 8;
 
     generate_primes(limit, num_threads, num_bits);
 
