@@ -149,12 +149,11 @@ my_integer = 123  #edit this value to try out a few examples
 # What happens when you choose a = 100 for the integer 123?
 initial_value_to_start = 42  # edit this value; it should be less than my_integer
 
-title = "Shor's Classical"
+title = "### Shor's Classical"
 start_time = start_timer(title)
 shors_algorithm(my_integer, initial_value_to_start, False)
 end_timer(title, start_time)
 ### END TESTING FUNCTIONS ###
-exit()
 
 
 # Define kernels for the quantum Fourier transform and the inverse quantum Fourier transform
@@ -443,7 +442,7 @@ def find_order_quantum(a, N):
 my_integer = 21
 initial_value_to_start = 5  # Try replacing 5 with 4
 quantum = True
-title = "Shor's Quantum (Simulated)"
+title = "### Shor's Quantum (Simulated)"
 start_time = start_timer(title)
 shors_algorithm(my_integer, initial_value_to_start, quantum)
 end_timer(title, start_time)

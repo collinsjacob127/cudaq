@@ -1,9 +1,3 @@
-/* CPP file for BigNum class
- * Class for ints larger than available with standard types.
- * Author: Jacob Collins
- * Sources: Much of this code was written with assistance
- *          from ChatGPT 
- */
 #include "bignum.h"
 
 BigNum::BigNum(uint64_t value) {
@@ -28,8 +22,7 @@ std::string BigNum::toString() const {
 }
 
 int BigNum::toInt() const {
-    // Assume you have a valid range check in place
-    return (data.size() > 0) ? data[0] : 0; // Simplified for a single block BigNum
+    return (data.size() > 0) ? data[0] : 0;
 }
 
 BigNum BigNum::operator+(const BigNum& other) const {
@@ -88,7 +81,7 @@ BigNum BigNum::operator*(const BigNum& other) const {
         uint64_t carry = 0;
         for (size_t j = 0; j < other.data.size() || carry; ++j) {
             uint64_t a = result.data[i + j] +
-                data[i] * (j < other.data.size() ? other.data[j] : 0) + carry;
+                         data[i] * (j < other.data.size() ? other.data[j] : 0) + carry;
             result.data[i + j] = a % BASE;
             carry = a / BASE;
         }
@@ -127,13 +120,11 @@ BigNum BigNum::operator%(const BigNum& other) const {
 
 BigNum BigNum::operator<<(int shift) const {
     BigNum result = *this;
-    uint64_t shift_blocks = shift / 32; // Shifting by base (32-bit chunks)
-    int shift_bits = shift % 32;        // Remaining bit shift within a chunk
+    uint64_t shift_blocks = shift / 32;
+    int shift_bits = shift % 32;
 
-    // Add zero blocks for the number of full 32-bit blocks to shift
     result.data.insert(result.data.begin(), shift_blocks, 0);
 
-    // Handle the remaining bit shift
     if (shift_bits > 0) {
         uint64_t carry = 0;
         for (size_t i = 0; i < result.data.size(); ++i) {
@@ -146,7 +137,6 @@ BigNum BigNum::operator<<(int shift) const {
         }
     }
 
-    // Remove leading zeros if necessary
     while (result.data.size() > 1 && result.data.back() == 0) {
         result.data.pop_back();
     }

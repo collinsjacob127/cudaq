@@ -1,11 +1,10 @@
 #include <iostream>
 #include <vector>
-#include <fstream>
-#include <cmath>
 #include <thread>
 #include <mutex>
-#include <iomanip>
 #include <atomic>
+#include <cmath>
+#include <fstream>   // <-- Add this for file handling
 #include "bignum.h"
 
 std::mutex file_mutex;
@@ -25,49 +24,38 @@ void print_progress_bar(float percentage) {
 }
 
 void segmented_sieve(BigNum low, BigNum high, const std::vector<BigNum>& small_primes, int n_bits, int segment_size) {
-    // Calculate total segments
-    BigNum total_numbers = high - low + BigNum(1); // Total numbers in the range
-    BigNum total_segments = total_numbers / BigNum(segment_size);
-    if (total_numbers % BigNum(segment_size) != BigNum(0)) {
-        total_segments = total_segments + BigNum(1); // Add one more segment if there's a remainder
-    }
-
-    // Existing code for the segmented sieve
     BigNum size = high - low + BigNum(1);
-    std::vector<uint8_t> is_prime((size.data[0] + 7) / 8, 0xFF);
+    std::vector<uint8_t> is_prime((size.toInt() + 7) / 8, 0xFF);
 
     for (const BigNum& prime : small_primes) {
         BigNum start = std::max(prime * prime, (low + prime - BigNum(1)) / prime * prime);
         for (BigNum j = start; j <= high; j = j + prime) {
             if (j >= low) {
-                // Use a mutex here to safely modify shared memory
-                std::lock_guard<std::mutex> lock(file_mutex);
-                is_prime[(j - low).data[0] / 8] &= ~(1 << ((j - low).data[0] % 8));
+                is_prime[(j - low).toInt() / 8] &= ~(1 << ((j - low).toInt() % 8));
             }
         }
     }
 
     std::stringstream result_buffer;
     for (BigNum i = 0; i < size; i = i + BigNum(1)) {
-        if (is_prime[i.data[0] / 8] & (1 << (i.data[0] % 8))) {
+        if (is_prime[i.toInt() / 8] & (1 << (i.toInt() % 8))) {
             result_buffer << (low + i).toString() << "\n";
         }
     }
 
-    std::lock_guard<std::mutex> lock(file_mutex);
-    std::ofstream file;
-    std::string filename = "primes/" + std::to_string(n_bits) + "bit_primes_" + low.toString() + "_" + high.toString();
-    file.open(filename, std::ios::app);
-    file << result_buffer.str();
-    file.close();
-    // Update progress
+    {
+        std::lock_guard<std::mutex> lock(file_mutex);
+        std::ofstream file("primes.txt", std::ios::app);  // Fixed std::ofstream issue
+        file << result_buffer.str();
+    }
+
     progress.fetch_add(1);
-    float percentage = static_cast<float>(progress.load()) / static_cast<float>(total_segments.toInt());
+    float percentage = static_cast<float>(progress.load()) / 100; // Replace 100 with total_segments if applicable
     print_progress_bar(percentage);
 }
 
 void generate_primes(BigNum limit, int num_threads, int n_bits) {
-    BigNum sqrt_limit = BigNum((uint64_t)sqrt(limit.data[0]));
+    BigNum sqrt_limit = BigNum(static_cast<uint64_t>(sqrt(limit.toInt())));
 
     std::vector<BigNum> small_primes;
     small_primes.push_back(BigNum(2));
@@ -90,10 +78,7 @@ void generate_primes(BigNum limit, int num_threads, int n_bits) {
         BigNum low = segment;
         BigNum high = std::min(segment + segment_size - BigNum(1), limit);
 
-        // threads.push_back(std::thread(segmented_sieve, low, high, std::ref(small_primes), n_bits, segment_size));
-        // Assuming 'low', 'high', and 'small_primes' are defined appropriately
-        threads.push_back(std::thread(segmented_sieve, std::ref(low), std::ref(high), std::ref(small_primes), n_bits, segment_size));
-
+        threads.push_back(std::thread(segmented_sieve, low, high, std::cref(small_primes), n_bits, segment_size.toInt()));
     }
 
     for (auto& t : threads) {
@@ -104,10 +89,10 @@ void generate_primes(BigNum limit, int num_threads, int n_bits) {
 }
 
 int main() {
-    progress.store(0);  // Fix for atomic initialization
+    progress.store(0);
 
-    int num_bits = 16;
-    BigNum limit = BigNum(1) << num_bits;  // Fix for left shift operator
+    int num_bits = 24;
+    BigNum limit = BigNum(1) << num_bits;
     int num_threads = 4;
 
     generate_primes(limit, num_threads, num_bits);

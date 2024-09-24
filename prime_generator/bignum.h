@@ -1,9 +1,3 @@
-/* Header file for BigNum class, used to work with
- * numbers larger than available with standard types.
- * Author: Jacob Collins
- * Sources: Much of this code was written with assistance
- *          from ChatGPT 
- */
 #ifndef BIGNUM_H
 #define BIGNUM_H
 
@@ -13,25 +7,30 @@
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
-#include <cstdint>
+#include <cstdint>  // <-- Add this for fixed-width integer types
 
 class BigNum {
 public:
     std::vector<uint64_t> data;
-    static const uint64_t BASE = 1ULL << 32; // Base is 2^32 to fit within a uint64_t
+    static const uint64_t BASE = 1ULL << 32;
 
     BigNum(uint64_t value = 0);
     BigNum(const std::string& str);
 
     std::string toString() const;
     int toInt() const;
+
+    // Arithmetic operators
     BigNum operator+(const BigNum& other) const;
     BigNum operator-(const BigNum& other) const;
     BigNum operator*(const BigNum& other) const;
     BigNum operator/(const BigNum& other) const;
     BigNum operator%(const BigNum& other) const;
+
+    // Shift operator
     BigNum operator<<(int shift) const;
 
+    // Comparison operators
     bool operator<(const BigNum& other) const;
     bool operator<=(const BigNum& other) const;
     bool operator>(const BigNum& other) const;
