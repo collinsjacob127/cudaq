@@ -1,0 +1,6 @@
+.*
+!.gitignore
+test.py
+*.out
+*/primes/*
+!*/primes/16bit_primes_2_65535.txt
