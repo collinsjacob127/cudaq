@@ -124,7 +124,6 @@ void example_bignum_use() {
         }
     }
     std::cout << std::endl;
-
 }
 
 int main() {
