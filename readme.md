@@ -11,11 +11,11 @@ Contact Info: Jacob Collins | jbcollins@csuchico.edu
 - C++ Implementation for better data types
 - Generate plots
 - Generalize Shor's
-    [] Int -> Bit initialization
-    [] Mult
-    [] Exp
-    [] Mod
-    [] Phase
+    - [ ] Int -> Bit initialization
+    - [ ] Mult
+    - [ ] Exp
+    - [ ] Mod
+    - [ ] Phase
 
 ## Installation
 
