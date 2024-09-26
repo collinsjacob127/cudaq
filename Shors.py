@@ -9,7 +9,7 @@ import contfrac
 
 from helpers import end_timer, start_timer, compareLines, printProgressBar, separate_ns
 
-DEBUG = False
+DEBUG = True
 
 def shors_algorithm(N, initial, quantum):
     """ Factor N using Shor's algorithm with initial starting value and choice of 
@@ -223,7 +223,8 @@ def test_classical_times(bit_list=[8],
         end_timer(start_fulltime, "Shors Classical Runtimes")
     return mean_times
 
-bit_list = [4, 5, 6, 7, 8] 
+# bit_list = [4, 5, 6, 7, 8, 12] 
+bit_list = [16] 
 sample_size = 5 
 times = test_classical_times(bit_list, sample_size)
 for i, b in enumerate(bit_list):
