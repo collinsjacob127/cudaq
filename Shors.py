@@ -284,10 +284,10 @@ def test_classical_times(bit_list=[16],
         mean_times.append(samp_mean)
 
     if DEBUG or show_progress:
-        # Corrected: Calculate and show the total elapsed time properly
-        elapsed_ns = sample_prog.get_time() - fulltime_start
-        print("Shor's Classical Runtimes completed" + \
-              f' in {sample_prog._separate_ns(elapsed_ns)}')
+        pass
+        # elapsed_ns = sample_prog.get_time() - fulltime_start
+        # print("Shor's Classical Runtimes completed" + \
+        #       f' in {sample_prog._separate_ns(elapsed_ns)}')
     
     return mean_times
 
