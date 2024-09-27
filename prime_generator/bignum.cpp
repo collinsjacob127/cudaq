@@ -29,22 +29,26 @@ BigNum BigNum::operator+(const BigNum& other) const {
     BigNum result;
     uint64_t carry = 0;
     size_t n = std::max(data.size(), other.data.size());
-    result.data.resize(n);
+    result.data.resize(n);  // Resize to accommodate the largest number
 
+    // Perform addition with carry propagation
     for (size_t i = 0; i < n; ++i) {
         uint64_t a = (i < data.size()) ? data[i] : 0;
         uint64_t b = (i < other.data.size()) ? other.data[i] : 0;
         uint64_t sum = a + b + carry;
 
-        result.data[i] = sum % BASE;
-        carry = sum / BASE;
+        result.data[i] = sum;  // Store the lower 64 bits
+        carry = (sum < a) || (sum < b) || (carry && sum == a + b);  // Correct carry calculation
     }
 
+    // If there's still a carry left, add a new chunk to store it
     if (carry > 0) {
         result.data.push_back(carry);
     }
+
     return result;
 }
+
 
 BigNum BigNum::operator-(const BigNum& other) const {
     if (*this < other) throw std::underflow_error("Negative result in BigNum subtraction");

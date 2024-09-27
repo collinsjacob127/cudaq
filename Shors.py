@@ -1,4 +1,4 @@
-from math import gcd, log2, ceil
+from numpy import gcd
 import numpy as np
 import random
 import cudaq
@@ -6,29 +6,13 @@ from cudaq import *
 import fractions
 import matplotlib.pyplot as plt
 import contfrac
+from os import makedirs
 
-import time # User for timer
+from helpers import end_timer, start_timer # Getting times
+from helpers import separate_ns, printProgressBar, ProgressTimer # Console output
+from helpers import compareLines # Plotting lines
 
-# Function to start the timer (in nanoseconds)
-def start_timer(title):
-    start_time = time.time_ns()  # Get the current time in nanoseconds
-    print(f'{title} starting')
-    return start_time
-
-# Function to end the timer (in nanoseconds)
-def end_timer(title, start_time):
-    end_time = time.time_ns()  # Get the current time in nanoseconds
-    time_diff = end_time - start_time  # Calculate the total time difference in nanoseconds
-
-    # Convert to seconds, milliseconds, and nanoseconds
-    total_seconds = time_diff // 1_000_000_000  # Get the full seconds
-    remainder_ns = time_diff % 1_000_000_000  # Get the remaining nanoseconds after seconds
-    total_milliseconds = remainder_ns // 1_000_000  # Get the full milliseconds from the remainder
-    total_nanoseconds = remainder_ns % 1_000_000  # Get the remaining nanoseconds
-
-    # Print the result in components
-    print(f'{title} finished in {total_seconds} s, {total_milliseconds} ms, {total_nanoseconds} ns')
-
+DEBUG = False
 
 def shors_algorithm(N, initial, quantum):
     """ Factor N using Shor's algorithm with initial starting value and choice of 
@@ -52,11 +36,13 @@ def shors_algorithm(N, initial, quantum):
     if N % 2 == 0:
         divisor1 = 2
         divisor2 = N // 2
-        print("Found factors:", divisor1, divisor2)
+        if DEBUG:
+            print("Found factors:", divisor1, divisor2)
         return (divisor1, divisor2)
 
     attempts = [initial]
-    while (True):
+    max_iter = 10_000
+    while (len(attempts) < max_iter):
         # 1. Select a random integer between 2 and N-1
         if len(attempts) == 1:
             a = initial
@@ -65,11 +51,13 @@ def shors_algorithm(N, initial, quantum):
                 [n for n in range(N - 1) if n not in attempts and n != 1])
 
         # 2. See if the integer selected in step 1 happens to factor N
-        print("Trying a =", a)
+        if DEBUG:
+            print("Trying a =", a)
         divisor1 = gcd(a, N)
         if divisor1 != 1:
             divisor2 = N // divisor1
-            print("Found factors of N={} by chance: {} and {}".format(N, divisor1, divisor2))
+            if DEBUG:
+                print("Found factors of N={} by chance: {} and {}".format(N, divisor1, divisor2))
             return (divisor1, divisor2)
 
         # 3. Find the order of a mod N (i.e., r, where a^r = 1 (mod N))
@@ -77,7 +65,8 @@ def shors_algorithm(N, initial, quantum):
             r = find_order_quantum(a, N)
         else:
             r = find_order_classical(a, N)
-        print("The order of a = {} is {}".format(a,r))
+        if DEBUG:
+            print("The order of a = {} is {}".format(a,r))
 
         # 4. If the order of a is found and it is
         # * even and
@@ -86,11 +75,13 @@ def shors_algorithm(N, initial, quantum):
         # We also want to rule out the case of finding the trivial factors: 1 and N.
         divisor1, divisor2 = test_order(a, r, N)
         if (divisor1 != 0):  # test_order will return a 0 if no factor is found
-            print("Found factors of N = {}: {} and {}".format(N,divisor1, divisor2))
+            if DEBUG:
+                print("Found factors of N = {}: {} and {}".format(N,divisor1, divisor2))
             return divisor1, divisor2
 
         # 5. Repeat
-        print("retrying...")
+        if DEBUG:
+            print("retrying...")
         attempts.append(a)
 
 
@@ -112,11 +103,12 @@ def test_order(a, r, N):
             possible_factors = [gcd(r - 1, N), gcd(r + 1, N)]
             for test_factor in possible_factors:
                 if test_factor != 1 and test_factor != N:
-                    return test_factor, N // test_factor
+                    return np.uint64(test_factor), np.uint64(N // test_factor)
     # period did not produce a factor
-    else:
+    # There were cases where it would return none and break everything
+    if DEBUG:
         print('No non-trivial factor found')
-        return 0, 0
+    return (0, 0)
 
 
 def find_order_classical(a, N):
@@ -138,22 +130,176 @@ def find_order_classical(a, N):
     while y != 1:
         y = y * a % N
         r += 1
-    return r
+    return np.uint32(r)
+
+##########################################################
+##### Get Actual Runtime of Classical Implementation #####
+##########################################################
+
+# Path to file of 16 bit primes
+fp = 'prime_generator/primes/16bit_primes_2_65535.txt'
+
+def read_nbit_sp_factors(nbits, 
+                     filepath, 
+                     include_lower=False):
+    """
+    Opens a csv of prime numbers and returns a list of all primes between 
+    sqrt(2^(nbits-1)) and sqrt(2^(nbits)-1). This ensures that any two randomly 
+    selected bits will produce a semiprime necessitating n-bits.
+
+    Parameters
+    ----------
+    nbits : int
+        If nbits is 4, will produce potential factors of a semiprime 
+        that needs exactly 8-bits.
+    include_lower : bool
+        If include_lower is True & nbits is 4, returns factors of a
+        semiprime that needs at most 8-bits
+
+    Returns
+    -------
+    list(int)
+        A list of factors, any two of which will produce an n-bit semiprime.
+    """
+    f = open(filepath, mode="r")
+    # Read primes from the file
+    primes = np.array(f.readlines()).astype(int)
+    # Filter primes to within the boundaries of our bitspace
+    if not include_lower:
+        # Smallest factor of n-bit 
+        low_bound = np.ceil(np.sqrt(np.pow(2, nbits-1)))
+        primes = np.extract(primes >= low_bound, primes)
+    # Largest factor of n-bit semiprime
+    upper_bound = np.floor(np.sqrt(np.pow(2, nbits)-1))
+    # Extract 
+    return np.extract(primes <= upper_bound, primes)
 
 
-### TODO: Get actuals (classical)
-### TESTING FUNCTIONS ###
-my_integer = 123  #edit this value to try out a few examples
-# Edit the value in the line below to try out different initial guesses for a.
-# What happens when you choose a = 42 for the integer 123?
-# What happens when you choose a = 100 for the integer 123?
-initial_value_to_start = 42  # edit this value; it should be less than my_integer
+def test_classical_times(bit_list=[16], 
+                         sample_size=10, 
+                         include_lower=False,
+                         show_progress=True,
+                         primes_filepath=fp,
+                         save_path_prefix='times_out/classical/',
+                         save=True):
+    """ 
+    Tests runtimes of Shor's classical implementation.
+    
+    Parameters
+    ----------
+    bit_list : list(int) 
+        A list of semiprime bit-sizes. Primes will be pulled
+        to generate a semiprime of the requested size.
+    sample_size : int
+        For each bitsize in bit_list, a sample_size 
+        number of semiprimes will be tested, and the
+        mean of their times will be appended to mean_times
+    show_progress : bool
+        Whether or not to print the title and loading bar
+    primes_filepath : string
+        File where a list of primes numbers is stored.
+    save : bool
+        save=True will save these times and their corresponding
+        bitsizes to a file in save_path_prefix
+    save_path_prefix : string
+        Path to the folder where these outputs are stored
 
-title = "### Shor's Classical"
-start_time = start_timer(title)
-shors_algorithm(my_integer, initial_value_to_start, False)
-end_timer(title, start_time)
-### END TESTING FUNCTIONS ###
+    Returns
+    -------
+    list(int)
+        The mean runtimes in nanoseconds 'A', such that A[i] is
+        the mean runtime for semiprimes of bitsize bit_list[i].
+    """
+    sample_prog = ProgressTimer(total=sample_size, length=25)
+    fulltime_start = sample_prog.get_time()
+    if DEBUG or show_progress:
+        pass
+        # Correct usage to start a timer (call start_timer)
+        sample_prog.start_timer(f'Computing Shor\'s Classical Runtimes' + \
+                                f' on {bit_list}-bit semiprimes')
+    indiv_prog = ProgressTimer(total=1)
+    mean_times = []
+
+    for i, n in enumerate(bit_list):
+        sample_prog.start_timer() 
+
+        # Pull two prime factors to make an n-bit semiprime
+        primes = read_nbit_sp_factors(n, fp, include_lower=include_lower)
+        if len(primes) < 2:
+            print("Too few bits for multiple factors, try include_lower")
+        
+        if save:
+            # Filename to identify this run
+            fname_id = f'{bit_list[0]}-{bit_list[len(bit_list)-1]}' \
+                if len(bit_list) > 1 else f'{bit_list[0]}'
+            # Setup full filepath
+            filepath = save_path_prefix + fname_id + ' classical.txt'
+            # Ensure save directory exists
+            makedirs(save_path_prefix, exist_ok=True)
+        
+        # Timer init for this bit size batch
+        sample_times = []
+
+        for j in range(sample_size):
+            # Pull two n-bit prime numbers from the file
+            two_primes = np.random.choice(primes, 2, replace=False)
+            # Update progress
+            prefix = f'{n}-bit {j+1}/{sample_size}: {two_primes} '
+            sample_prog.display_progress(iteration=j,
+                                         prefix=prefix,
+                                         show_time=True)
+            # Multiply to get our semiprime
+            semiprime = two_primes[0] * two_primes[1] 
+            # Get a decent starting value for 'a'
+            # TODO: Improve starting value for faster runs?
+            initial_value_to_start = int(np.sqrt(semiprime)) - 1 
+            
+            if DEBUG:
+                title = f'{n}-bit Classical Shors, {two_primes}' 
+            else:
+                title = None
+            
+            # Start Timer for individual run
+            indiv_prog.start_timer()
+            # Run our algorithm
+            shors_algorithm(semiprime, initial_value_to_start, False)
+            # Save our output time
+            sample_times.append(indiv_prog.get_time())
+            sample_prog.display_progress(iteration=j+1,
+                                         prefix=prefix,
+                                         show_time=True)
+        
+        # Get mean runtime
+        samp_mean = np.mean(sample_times)
+        
+        if save:
+            mode = 'w' if i == 0 else 'a'
+            with open(filepath, mode) as f:
+                f.write(' '.join(map(str, [n, samp_mean])) + '\n')
+        
+        # Display time that this batch of semiprimes took, total.
+        if show_progress and len(bit_list) > 1:
+            sample_prog.start_timer()  # Restart timer for next batch
+
+        mean_times.append(samp_mean)
+
+    if DEBUG or show_progress:
+        pass
+        # elapsed_ns = sample_prog.get_time() - fulltime_start
+        # print("Shor's Classical Runtimes completed" + \
+        #       f' in {sample_prog._separate_ns(elapsed_ns)}')
+    
+    return mean_times
+
+# Example usage for testing
+bit_list = [12, 13, 14, 15, 16]
+sample_size = 10
+times = test_classical_times(bit_list, sample_size)
+
+exit()
+#########################################
+#####  END CLASSICAL RUNTIME TRIALS #####
+#########################################
 
 
 # Define kernels for the quantum Fourier transform and the inverse quantum Fourier transform
