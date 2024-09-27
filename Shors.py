@@ -6,10 +6,13 @@ from cudaq import *
 import fractions
 import matplotlib.pyplot as plt
 import contfrac
+from os import makedirs
 
-from helpers import end_timer, start_timer, compareLines, printProgressBar, separate_ns
+from helpers import end_timer, start_timer # Getting times
+from helpers import separate_ns, printProgressBar, ProgressTimer # Console output
+from helpers import compareLines # Plotting lines
 
-DEBUG = True
+DEBUG = False
 
 def shors_algorithm(N, initial, quantum):
     """ Factor N using Shor's algorithm with initial starting value and choice of 
@@ -136,103 +139,166 @@ def find_order_classical(a, N):
 # Path to file of 16 bit primes
 fp = 'prime_generator/primes/16bit_primes_2_65535.txt'
 
-''' Opens a csv of prime numbers and returns a list of all n-bit prime numbers.
-nbits: int
-    If nbits is 4, returns primes in range [1000, 1111]
-include_lower: bool
-    If include_lower is True & nbits is 4, returns primes in [0000, 1111]
-'''
-def read_nbit_primes(nbits, 
+def read_nbit_sp_factors(nbits, 
                      filepath, 
                      include_lower=False):
+    """
+    Opens a csv of prime numbers and returns a list of all primes between 
+    sqrt(2^(nbits-1)) and sqrt(2^(nbits)-1). This ensures that any two randomly 
+    selected bits will produce a semiprime necessitating n-bits.
+
+    Parameters
+    ----------
+    nbits : int
+        If nbits is 4, will produce potential factors of a semiprime 
+        that needs exactly 8-bits.
+    include_lower : bool
+        If include_lower is True & nbits is 4, returns factors of a
+        semiprime that needs at most 8-bits
+
+    Returns
+    -------
+    list(int)
+        A list of factors, any two of which will produce an n-bit semiprime.
+    """
     f = open(filepath, mode="r")
     # Read primes from the file
     primes = np.array(f.readlines()).astype(int)
     # Filter primes to within the boundaries of our bitspace
     if not include_lower:
-        # Smallest n-bit number that cannot be represented
-        # with less than n bits
-        low_bound = np.pow(2, nbits-1) 
+        # Smallest factor of n-bit 
+        low_bound = np.ceil(np.sqrt(np.pow(2, nbits-1)))
         primes = np.extract(primes >= low_bound, primes)
-    # Largest n-bit number
-    upper_bound = np.pow(2, nbits)-1 
+    # Largest factor of n-bit semiprime
+    upper_bound = np.floor(np.sqrt(np.pow(2, nbits)-1))
     # Extract 
     return np.extract(primes <= upper_bound, primes)
 
 
-''' Tests runtimes of shor's classical implementation
-bit_list: list(int) 
-    A list of bit-sizes to pull prime factors from.
-    If bit_list[i]=8, then two 8-bit primes will be 
-    grabbed, and a 16-bit semiprime will be used as
-    input to Shors classical
-sample_size: int
-    For each bitsize in bit_list, a sample_size 
-    number of semiprimes will be tested, and the
-    mean of their times will be appended to mean_times
-show_progress: bool
-    Whether or not to print the title and loading bar
-primes_filepath: string
-    File where a list of primes numbers is stored.
-'''
-def test_classical_times(bit_list=[8], 
+def test_classical_times(bit_list=[16], 
                          sample_size=10, 
+                         include_lower=False,
                          show_progress=True,
-                         primes_filepath=fp):
+                         primes_filepath=fp,
+                         save_path_prefix='times_out/classical/',
+                         save=True):
+    """ 
+    Tests runtimes of Shor's classical implementation.
+    
+    Parameters
+    ----------
+    bit_list : list(int) 
+        A list of semiprime bit-sizes. Primes will be pulled
+        to generate a semiprime of the requested size.
+    sample_size : int
+        For each bitsize in bit_list, a sample_size 
+        number of semiprimes will be tested, and the
+        mean of their times will be appended to mean_times
+    show_progress : bool
+        Whether or not to print the title and loading bar
+    primes_filepath : string
+        File where a list of primes numbers is stored.
+    save : bool
+        save=True will save these times and their corresponding
+        bitsizes to a file in save_path_prefix
+    save_path_prefix : string
+        Path to the folder where these outputs are stored
+
+    Returns
+    -------
+    list(int)
+        The mean runtimes in nanoseconds 'A', such that A[i] is
+        the mean runtime for semiprimes of bitsize bit_list[i].
+    """
+    sample_prog = ProgressTimer(total=sample_size, length=25)
+    fulltime_start = sample_prog.get_time()
     if DEBUG or show_progress:
-        start_fulltime = start_timer(f'Computing Shors Classical Runtimes on {bit_list} bits')
-    if show_progress:
-        printProgressBar(iteration=0, 
-                        total=len(bit_list)*sample_size,
-                        length=40,
-                        prefix=f'Starting...')
+        pass
+        # Correct usage to start a timer (call start_timer)
+        sample_prog.start_timer(f'Computing Shor\'s Classical Runtimes' + \
+                                f' on {bit_list}-bit semiprimes')
+    indiv_prog = ProgressTimer(total=1)
     mean_times = []
+
     for i, n in enumerate(bit_list):
-        primes = read_nbit_primes(n, fp)
+        sample_prog.start_timer() 
+
+        # Pull two prime factors to make an n-bit semiprime
+        primes = read_nbit_sp_factors(n, fp, include_lower=include_lower)
+        if len(primes) < 2:
+            print("Too few bits for multiple factors, try include_lower")
+        
+        if save:
+            # Filename to identify this run
+            fname_id = f'{bit_list[0]}-{bit_list[len(bit_list)-1]}' \
+                if len(bit_list) > 1 else f'{bit_list[0]}'
+            # Setup full filepath
+            filepath = save_path_prefix + fname_id + ' classical.txt'
+            # Ensure save directory exists
+            makedirs(save_path_prefix, exist_ok=True)
+        
+        # Timer init for this bit size batch
         sample_times = []
+
         for j in range(sample_size):
-            if show_progress:
-                printProgressBar(iteration=i*sample_size + j,
-                                total=len(bit_list)*sample_size,
-                                length=40,
-                                prefix=f'{n}bit #{j} ')
             # Pull two n-bit prime numbers from the file
             two_primes = np.random.choice(primes, 2, replace=False)
+            # Update progress
+            prefix = f'{n}-bit {j+1}/{sample_size}: {two_primes} '
+            sample_prog.display_progress(iteration=j,
+                                         prefix=prefix,
+                                         show_time=True)
             # Multiply to get our semiprime
-            semiprime = two_primes[0]*two_primes[1] 
+            semiprime = two_primes[0] * two_primes[1] 
             # Get a decent starting value for 'a'
-            initial_value_to_start = int(np.sqrt(semiprime))-1 # Can try messing around with this
+            # TODO: Improve starting value for faster runs?
+            initial_value_to_start = int(np.sqrt(semiprime)) - 1 
+            
             if DEBUG:
-                title = f'{n*2}bit Classical Shors, {two_primes}' 
+                title = f'{n}-bit Classical Shors, {two_primes}' 
             else:
                 title = None
-            # Start Timer
-            t_start = start_timer(title)
+            
+            # Start Timer for individual run
+            indiv_prog.start_timer()
             # Run our algorithm
             shors_algorithm(semiprime, initial_value_to_start, False)
             # Save our output time
-            sample_times.append(end_timer(t_start, title))
+            sample_times.append(indiv_prog.get_time())
+            sample_prog.display_progress(iteration=j+1,
+                                         prefix=prefix,
+                                         show_time=True)
+        
         # Get mean runtime
-        mean_times.append(np.mean(sample_times))
-    if show_progress:
-        printProgressBar(iteration=len(bit_list)*sample_size,
-                        total=len(bit_list)*sample_size,
-                        length=40,
-                        prefix=f'Finished')
+        samp_mean = np.mean(sample_times)
+        
+        if save:
+            mode = 'w' if i == 0 else 'a'
+            with open(filepath, mode) as f:
+                f.write(' '.join(map(str, [n, samp_mean])) + '\n')
+        
+        # Display time that this batch of semiprimes took, total.
+        if show_progress and len(bit_list) > 1:
+            sample_prog.start_timer()  # Restart timer for next batch
+
+        mean_times.append(samp_mean)
+
     if DEBUG or show_progress:
-        end_timer(start_fulltime, "Shors Classical Runtimes")
+        # Corrected: Calculate and show the total elapsed time properly
+        elapsed_ns = sample_prog.get_time() - fulltime_start
+        print("Shor's Classical Runtimes completed" + \
+              f' in {sample_prog._separate_ns(elapsed_ns)}')
+    
     return mean_times
 
-# bit_list = [4, 5, 6, 7, 8, 12] 
-bit_list = [16] 
-sample_size = 5 
+# Example usage for testing
+bit_list = [12, 13, 14, 15, 16]
+sample_size = 10
 times = test_classical_times(bit_list, sample_size)
-for i, b in enumerate(bit_list):
-    print(f'\n{b*2}bit SPs: {separate_ns(times[i])}')
 
 exit()
 #########################################
-##### END CLASSICAL RUNTIME ACTUALS #####
+#####  END CLASSICAL RUNTIME TRIALS #####
 #########################################
 
 

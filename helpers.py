@@ -190,12 +190,14 @@ def start_timer(title=None):
     start_time = time.time_ns()  # Get the current time in nanoseconds
     return start_time
 
-def separate_ns(ns):
-    total_seconds = ns // 1_000_000_000  # Get the full seconds
+def separate_ns(ns, as_list=False):
+    seconds = ns // 1_000_000_000  # Get the full seconds
     remainder_ns = ns % 1_000_000_000  # Get the remaining nanoseconds after seconds
-    total_milliseconds = remainder_ns // 1_000_000  # Get the full milliseconds from the remainder
-    total_nanoseconds = remainder_ns % 1_000_000  # Get the remaining nanoseconds
-    return f'{total_seconds} s, {total_milliseconds} ms, {total_nanoseconds} ns'
+    milliseconds = remainder_ns // 1_000_000  # Get the full milliseconds from the remainder
+    nanoseconds = remainder_ns % 1_000_000  # Get the remaining nanoseconds
+    if as_list:
+        return [seconds, milliseconds, nanoseconds]
+    return f'{seconds} s, {milliseconds} ms, {nanoseconds} ns'
 
 # Function to end the timer (in nanoseconds)
 def end_timer(start_time, title=None):
@@ -281,3 +283,201 @@ def printProgressBar (
     # Print New Line on Complete
     if iteration == total: 
         print()
+
+class ProgressTimer:
+    """
+    A class to display a progress bar in the terminal with optional time tracking.
+
+    This class provides an easy way to track the progress of loops or tasks and optionally display the elapsed time.
+    
+    Attributes:
+    -----------
+    total : int
+        The total number of iterations for the progress bar.
+    iteration : int
+        The current iteration (defaults to 0).
+    prefix : str
+        The prefix string to display before the progress bar.
+    suffix : str
+        The suffix string to display after the progress bar.
+    decimals : int
+        The number of decimal places to display for the progress percentage.
+    length : int
+        The character length of the progress bar.
+    fill : str
+        The character to use to fill the progress bar.
+    start_time : int
+        The time (in nanoseconds) when the progress tracking started.
+
+    Methods:
+    --------
+    _separate_ns(ns, as_list=False):
+        Separates a time duration in nanoseconds into seconds, milliseconds, and nanoseconds.
+    display_progress(iteration=None, prefix=None, suffix=None, decimals=None, length=None, fill=None, show_time=False):
+        Updates and prints the progress bar with optional elapsed time.
+    start_timer(desc=None):
+        Resets the start time to the current time and optionally prints a description.
+    show_time(desc=None):
+        Prints the elapsed time since the last start time with an optional description.
+    get_time():
+        Returns the elapsed time in nanoseconds since the last start time as an integer.
+    """
+
+    def __init__(self, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+        """
+        Initializes the ProgressTimer with a total number of iterations and optional display settings.
+
+        Parameters:
+        -----------
+        total : int
+            The total number of iterations for the progress bar.
+        prefix : str, optional
+            The prefix string to display before the progress bar (default is an empty string).
+        suffix : str, optional
+            The suffix string to display after the progress bar (default is an empty string).
+        decimals : int, optional
+            The number of decimal places to display for the progress percentage (default is 1).
+        length : int, optional
+            The character length of the progress bar (default is 100).
+        fill : str, optional
+            The character to use to fill the progress bar (default is '█').
+        """
+        self.total = total
+        self.iteration = 0
+        self.prefix = prefix
+        self.suffix = suffix
+        self.decimals = decimals
+        self.length = length
+        self.fill = fill
+        self.start_time = time.time_ns()  # Save the start time as a Python int
+
+    def _separate_ns(self, ns, as_list=False):
+        """
+        Separates a given duration in nanoseconds into seconds, milliseconds, and remaining nanoseconds.
+
+        Parameters:
+        -----------
+        ns : int
+            The time duration in nanoseconds.
+        as_list : bool, optional
+            If True, returns a list [seconds, milliseconds, nanoseconds].
+            Otherwise, returns a formatted string (default is False).
+        
+        Returns:
+        --------
+        str or list
+            A string representation or list of the separated time components.
+        """
+        seconds = ns // 1_000_000_000  # Get the full seconds
+        remainder_ns = ns % 1_000_000_000  # Get the remaining nanoseconds after seconds
+        milliseconds = remainder_ns // 1_000_000  # Get the full milliseconds from the remainder
+        nanoseconds = remainder_ns % 1_000_000  # Get the remaining nanoseconds
+        if as_list:
+            return [seconds, milliseconds, nanoseconds]
+        return f'{seconds} s, {milliseconds} ms, {nanoseconds} ns'
+
+    def display_progress(self, iteration=None, prefix=None, suffix=None, decimals=None, length=None, fill=None, show_time=False):
+        """
+        Displays and updates the progress bar in the terminal.
+
+        Parameters:
+        -----------
+        iteration : int, optional
+            The current iteration to display (default is None, which uses the stored value).
+        prefix : str, optional
+            The prefix string to display before the progress bar (default is the initialized prefix).
+        suffix : str, optional
+            The suffix string to display after the progress bar (default is the initialized suffix).
+        decimals : int, optional
+            The number of decimal places to display for the progress percentage (default is the initialized value).
+        length : int, optional
+            The character length of the progress bar (default is the initialized length).
+        fill : str, optional
+            The character to use to fill the progress bar (default is the initialized fill).
+        show_time : bool, optional
+            If True, displays the elapsed time since the progress bar was initialized (default is False).
+        
+        Notes:
+        ------
+        If `iteration` is equal to `total`, a new line is printed to indicate completion.
+        """
+        # Use provided parameters if they exist; otherwise, use instance variables
+        self.iteration = iteration if iteration is not None else self.iteration
+        prefix = prefix if prefix is not None else self.prefix
+        suffix = suffix if suffix is not None else self.suffix
+        decimals = decimals if decimals is not None else self.decimals
+        length = length if length is not None else self.length
+        fill = fill if fill is not None else self.fill
+
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (self.iteration / float(self.total)))
+        filled_length = int(length * self.iteration // self.total)
+        bar = fill * filled_length + '-' * (length - filled_length)
+        
+        # Show time if show_time is True
+        time_display = ""
+        if show_time:
+            elapsed_ns = self.get_time()
+            seconds, milliseconds, _ = self._separate_ns(elapsed_ns, as_list=True)
+            time_display = f' {seconds}s {milliseconds}ms'
+
+        # Print the progress bar
+        print(f'\r{prefix} |{bar}| {percent}% {time_display} {suffix}', end="\r")
+
+        # Print a new line when the process is complete
+        if self.iteration == self.total:
+            print()
+
+    def start_timer(self, desc=None):
+        """
+        Resets the start time to the current time and optionally prints a description.
+
+        Parameters:
+        -----------
+        desc : str, optional
+            A description to print when resetting the timer (default is None).
+
+        Example:
+        --------
+        >>> progress.start_timer("New task started")
+        """
+        self.start_time = time.time_ns()
+        if desc:
+            print(f'{desc}')
+
+    def show_time(self, desc=None):
+        """
+        Displays the elapsed time since the last start time with an optional description.
+
+        Parameters:
+        -----------
+        desc : str, optional
+            A description to print before the elapsed time (default is None).
+
+        Example:
+        --------
+        >>> progress.show_time("Time elapsed")
+        """
+        elapsed_ns = self.get_time()
+        seconds, milliseconds, _ = self._separate_ns(elapsed_ns, as_list=True)
+        
+        if desc:
+            print(f'{desc}: {seconds}s {milliseconds}ms')
+        else:
+            print(f'Elapsed time: {seconds}s {milliseconds}ms')
+
+    def get_time(self):
+        """
+        Returns the elapsed time in nanoseconds since the last start time.
+
+        Returns:
+        --------
+        int
+            The elapsed time in nanoseconds as a Python integer.
+        
+        Example:
+        --------
+        >>> elapsed_ns = progress.get_time()
+        >>> print(f"Elapsed time: {elapsed_ns} ns")
+        """
+        current_time = time.time_ns()
+        return current_time - self.start_time
