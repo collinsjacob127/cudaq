@@ -8,14 +8,19 @@ Contact Info: Jacob Collins | jbcollins@csuchico.edu
 
 ## TO-DO:
 
-- C++ Implementation for better data types
-- Generate plots
-- Generalize Shor's
+- [x] Python starter code
+- [ ] C++ Starter code
+- [ ] Generalize Shor's
+    - [ ] C++ Implementation for better data types
     - [ ] Int -> Bit initialization
     - [ ] Mult
     - [ ] Exp
     - [ ] Mod
     - [ ] Phase
+- [ ] Update Grover's
+    - [ ]  Add Key register
+    - [x]  MCT
+    - [ ]  Move to CudaQ
 
 ## Installation Instructions
 
