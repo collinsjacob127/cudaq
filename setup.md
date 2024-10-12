@@ -12,7 +12,7 @@ If you just want to be able to run `.py` files, do the following:
 3. `git clone https://github.com/collinsjacob127/cudaq`
 4. `cd cudaq`
 5. `python -m pip install cuda-quantum` 
-6. Try running program.py with `python program.py`
+6. Try running Shors.py with `python Shors.py`
 
 I would suggest the use of a python venv for package management. [Conda Docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html), and [Example Venv Setups](https://janakiev.com/blog/jupyter-virtual-envs/) might be helpful.
 

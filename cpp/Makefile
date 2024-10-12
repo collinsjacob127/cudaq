@@ -1,11 +1,11 @@
 # Makefile for Shor's Alg
-EXE = a.out
+EXE = shors.x
 FILENAME = shors.cpp
 CFLAGS = -Wall -g
 CXXFLAGS = -Wall
 LDLIBS = 
-CC = gcc
-CXX = g++
+CC = nvcc
+CXX = nvq++
 
 .PHONY: all
 all: $(EXE)

@@ -1,4 +1,3 @@
-// Author: Jacob Collins
 // Compile and run with:
 // ```
 // nvq++ grover.cpp -o grover.x && ./grover.x
@@ -94,59 +93,6 @@ std::string arrayToString(std::vector<T> arr, bool binary, int nbits) {
   return ss.str();
 }
 
-//TODO: Quantum Fourier Transform
-// Test that what I wrote here works
-__qpu__ void quantum_fourier_transform(cudaq::qvector<> &qs, bool inverse) {
-  int N = qs.size();
-  cudaq::compute_action(
-    // Swap qubits if inverse true
-    [&]() {
-      if (inverse) {
-        for (int i = 0; i < N / 2; ++i) {
-          swap(qs[i], qs[N - i - 1]);
-        }
-      }
-    },
-    // Apply QFT
-    [&]() {
-      for (int i = 0; i < N - 1; ++i) {
-        h(qs[i]);
-        int j = i + 1;
-        for (int y = i; y >= 0; --y) {
-          double denom = (1UL << (j - y));
-          const double theta = -M_PI / denom;
-          r1<cudaq::ctrl>(theta, qs[j], qs[y]);
-        }
-      }
-    }
-  );
-  h(qs[N - 1]); // Python qft didn't have this, hmm
-}
-
-//TODO: Test Order
-// We have test order in py
-
-//TODO: Modular Mult
-// We have modular mult example with 5 and 21 in py
-
-//TODO: Modular Exp
-// We have modular exp example with 5 and 21 in py
-
-//TODO: Phase Kernel
-
-//TODO: Order from phase
-
-//TODO: Find Order
-
-
-void shors(int n, int initial) {
-    // int divisor
-    if (n % 2 == 0) {
-        
-    }
-    return;
-}
-
 int main(int argc, char *argv[]) {
   // Set up the list of values to search through
   std::vector<long> search_vals = {7, 4, 2, 9, 10};
@@ -154,14 +100,14 @@ int main(int argc, char *argv[]) {
   std::iota(index_vals.begin(), index_vals.end(), 0);
 
   // Set up value to search for, secret defaults to 3
-  auto secret = 1 < argc ? strtol(argv[1], nullptr, 2) : 0b1010;
+  auto secret = 1 < argc ? strtol(argv[1], NULL, 2) : 0b1010;
   int nbits_val = ceil(log2(max(std::vector<long>({max(search_vals), secret})) + 1));
   int nbits_index = ceil(log2(search_vals.size()));
   int nbits = ceil(log2(secret+1));
 
   // Helpful output
-  printf("Search vals: %s\n", arrayToString(search_vals, true, nbits_val).c_str());
-  printf("Index vals: %s\n", arrayToString(index_vals, true, nbits_index).c_str());
+  std::cout << "Search vals: " << arrayToString(search_vals, true, nbits_val) << std::endl;
+  std::cout << "Index vals: " << arrayToString(index_vals, true, nbits_index) << std::endl;
   printf("Secret: %ld\n", secret);
   printf("Nbits: %d\n", nbits);
   
