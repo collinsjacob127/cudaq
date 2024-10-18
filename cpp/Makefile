@@ -5,7 +5,7 @@ CFLAGS = -Wall -g
 CXXFLAGS = -Wall
 LDLIBS = 
 CC = gcc
-CXX = g++
+CXX = nvq++
 
 .PHONY: all
 all: $(EXE)
