@@ -2,6 +2,7 @@
 !.gitignore
 test.py
 *.out
+*.o
 */primes/*
 !*/primes/16bit_primes_2_65535.txt
 __pycache__/
