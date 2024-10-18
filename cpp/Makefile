@@ -1,18 +1,21 @@
-# Makefile for Shor's Alg
-EXE = a.out
-FILENAME = shors.cpp
+# Makefile for CudaQ
 CFLAGS = -Wall -g
 CXXFLAGS = -Wall
 LDLIBS = 
 CC = gcc
 CXX = nvq++
 
-.PHONY: all
-all: $(EXE)
+default: shors.o
 
-$(EXE): $(FILENAME)
-	$(CXX) $(CXXFLAGS) $(FILENAME) $(LDLIBS) -o $(EXE)
+# make <filename>.o
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
+    
+# make <filename> == make <filename>.o
+%: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@.o
 
-.PHONY: clean
+.PHONY: default clean
+
 clean:
-	rm -f $(EXE)
+	rm -f *.o
