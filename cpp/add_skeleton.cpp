@@ -1,6 +1,6 @@
 /**********************************
- * Description: Example Adder using CudaQ
- * Author: Jacob Collins
+ * Description: Skeleton for quantum full-adder.
+ * Author: <Your name here>
  * Instructions:
  *   Compile and run with:
  *   ```
@@ -30,7 +30,6 @@ std::string bin_str(T v, int nbits) {
   return ss.str();
 }
 
-// Return max value in an array
 template <typename T>
 T max(std::vector<T> arr) {
   T max = arr[0];
@@ -91,17 +90,13 @@ struct run_adder {
                           const int nbits_sum,
                           CallableKernel &&val1_setter, 
                           CallableKernel &&val2_setter) {
-    // Initialize Registers
     cudaq::qvector v_reg1(nbits_val); // Value 1 reg
     cudaq::qvector v_reg2(nbits_val); // Value 2 reg
     cudaq::qvector c_reg(nbits_sum);   // Sum reg
 
-    // Set values
     val1_setter(v_reg1);
     val2_setter(v_reg2);
-    // Add
     add(v_reg1, v_reg2, c_reg);
-    // Measure
     mz(v_reg1, v_reg2, c_reg);
   }
 };
@@ -110,11 +105,8 @@ struct run_adder {
 struct int_setter {
   const long val;
   void operator()(cudaq::qvector<> &qs) __qpu__ {
-    // Iterate through bits in val
     for (int i = 1; i <= qs.size(); ++i) {
-      // Bit-shift for single bitwise AND to apply X on correct qubits
       auto target_bit_set = (1 << (qs.size() - i)) & val;
-      // Apply X if bit i is valid
       if (target_bit_set) x(qs[i - 1]);
     }
   }

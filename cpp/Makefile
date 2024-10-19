@@ -2,7 +2,7 @@
 CFLAGS = -Wall -g
 CXXFLAGS = -Wall
 LDLIBS = 
-CC = gcc
+CC = nvcc
 CXX = nvq++
 
 default: shors.o
