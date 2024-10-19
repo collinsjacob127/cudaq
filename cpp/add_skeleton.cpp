@@ -4,11 +4,12 @@
  * Instructions:
  *   Compile and run with:
  *   ```
- *   $> make add
- *   $> ./add # Uses default values
+ *   $> make add_skeleton
+ *   $> ./add_skeleton # Uses default values
  *   OR
- *   $> ./add 00101 11101 # Takes binary input
+ *   $> ./add_skeleton 00101 11101 # Takes binary input
  *   ```
+ *   (You can rename it to whatever you want)
  **********************************/
 #include <cudaq.h>
 
