@@ -9,10 +9,11 @@ Contact Info: Jacob Collins | jbcollins@csuchico.edu
 ## TO-DO:
 
 - [x] Python starter code
-- [ ] C++ Starter code
+- [x] C++ Starter code
 - [ ] Generalize Shor's
-    - [ ] C++ Implementation for better data types
-    - [ ] Int -> Bit initialization
+    - [x] C++ Implementation for better data types
+    - [x] Int -> Bit initialization
+    - [x] Adder
     - [ ] Mult
     - [ ] Exp
     - [ ] Mod
