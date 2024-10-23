@@ -11,6 +11,14 @@
  *   ```
  *   (You can rename it to whatever you want)
  **********************************/
+/**********************************
+ * YOU WILL NEED TO LOOK AT THE DIAGRAMS
+ * TO KNOW HOW TO IMPLEMENT THE ADDER
+ * https://github.com/JAllsop/Quantum-Full-Adder/blob/master/ELEN4022_Lab_2_2021.ipynb
+ * Another option that may be more efficient, but requires some changes
+ * in the outline of the code:
+ * https://tsmatz.wordpress.com/2019/05/22/quantum-computing-modulus-add-subtract-multiply-exponent/
+ **********************************/
 #include <cudaq.h>
 
 #include <bitset>
