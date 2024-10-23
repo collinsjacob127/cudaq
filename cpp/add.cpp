@@ -11,23 +11,54 @@
  *   ```
  **********************************/
 #include <cudaq.h>
-
-#include <bitset>
 #include <cmath>
 #include <iostream>
-#include <numbers>
-#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 /****************** HELPER FUNCS ******************/
+// Convert some value to a string
+template <typename T>
+std::string to_string(T value) {
+  std::stringstream ss;
+  ss << value;
+  return ss.str();
+}
+
+// Convert nanoseconds to a string displaying subdivisions of time
+std::string format_time(long long nanoseconds) {
+    
+    long long milliseconds = nanoseconds / 1'000'000;  // From ns to ms
+    long long seconds = milliseconds / 1'000;          // From ms to seconds
+    milliseconds = milliseconds % 1'000;               // Remaining milliseconds
+
+    long long remaining_nanoseconds = nanoseconds % 1'000'000; // Remaining nanoseconds
+    long long microseconds = remaining_nanoseconds / 1'000;    // From ns to µs
+    remaining_nanoseconds = remaining_nanoseconds % 1'000;     // Remaining ns
+
+    // Create the formatted string
+    return to_string(seconds) + "s " +
+           to_string(milliseconds) + "ms " +
+           to_string(microseconds) + "µs " +
+           to_string(remaining_nanoseconds) + "ns";
+}
+
 // Convert value to binary string
 template <typename T>
-std::string bin_str(T v, int nbits) {
+std::string bin_str(T val, int nbits) {
   std::stringstream ss;
-  ss << std::bitset<sizeof(T) * 8>(v).to_string().substr(sizeof(T) * 8 - nbits,
-                                                         nbits);
+  for (int i = 1; i <= nbits; ++i) {
+    // Shift through the bits in val
+    auto target_bit_set = (1 << (nbits - i)) & val;
+    // Add matching val to string
+    if (target_bit_set) {
+      ss << '1';
+    } else {
+      ss << '0';
+    }
+  }
   return ss.str();
 }
 
@@ -56,8 +87,22 @@ int bin_to_int(std::string &s) {
 }
 
 /****************** CUDAQ FUNCS ******************/
-// QPU instructions for adding 2 value registers
-// aided by a carry register
+
+// Apply NOT-gates in accordance with bit-pattern of given integer.
+__qpu__ void set_int(const long val, cudaq::qvector<> &qs) {
+  // Iterate through bits in val
+  for (int i = 1; i <= qs.size(); ++i) {
+    // Bit-shift for single bitwise AND to apply X on correct qubits
+    auto target_bit_set = (1 << (qs.size() - i)) & val;
+    // Apply X if bit i is valid
+    if (target_bit_set) {
+      x(qs[i - 1]);
+    } 
+  }
+}
+
+// Bitwise addition of v_reg1 and v_reg2.
+// Output is {c_reg[0], v_reg2}
 __qpu__ void add(cudaq::qvector<> &v_reg1, cudaq::qvector<> &v_reg2,
                  cudaq::qvector<> &c_reg) {
   const int nbits_v = v_reg1.size();
@@ -87,36 +132,26 @@ __qpu__ void add(cudaq::qvector<> &v_reg1, cudaq::qvector<> &v_reg2,
 /****************** CUDAQ STRUCTS ******************/
 // Driver for adder
 struct run_adder {
-  template <typename CallableKernel>
-  __qpu__ auto operator()(const int nbits_val, const int nbits_sum,
-                          CallableKernel &&val1_setter,
-                          CallableKernel &&val2_setter) {
-    // Initialize Registers
+  __qpu__ auto operator()(const long val1, 
+                          const long val2) {
+    // 1. Compute Necessary Bits
+    // Necessary # bits computed based on input values. Min 1.
+    int nbits_val = ceil(log2(max(std::vector<long>({val1, val2, 1})) + 1));
+    // Sum register needs 1 extra bit (111 + 111 = 1110)
+    int nbits_sum = nbits_val + 1;
+
+    // 2. Initialize Registers
     cudaq::qvector v_reg1(nbits_val);  // Value 1 reg
     cudaq::qvector v_reg2(nbits_val);  // Value 2 reg
     cudaq::qvector c_reg(nbits_sum);   // Sum reg
+    set_int(val1, v_reg1);
+    set_int(val2, v_reg2);
 
-    // Set values
-    val1_setter(v_reg1);
-    val2_setter(v_reg2);
-    // Add
+    // 3. Add
     add(v_reg1, v_reg2, c_reg);
-    // Measure
+    // 4. Measure
+    // Sum is {c_reg[0], v_reg2}
     mz(v_reg1, v_reg2, c_reg);
-  }
-};
-
-// Apply not-gates matching binary pattern of val
-struct int_setter {
-  const long val;
-  void operator()(cudaq::qvector<> &qs) __qpu__ {
-    // Iterate through bits in val
-    for (int i = 1; i <= qs.size(); ++i) {
-      // Bit-shift for single bitwise AND to apply X on correct qubits
-      auto target_bit_set = (1 << (qs.size() - i)) & val;
-      // Apply X if bit i is valid
-      if (target_bit_set) x(qs[i - 1]);
-    }
   }
 };
 
@@ -132,19 +167,22 @@ int main(int argc, char *argv[]) {
   }
   // Necessary # bits computed based on input values. Min 1.
   int nbits_val = ceil(log2(max(std::vector<long>({val1, val2, 1})) + 1));
-  // Sum register needs 1 extra bit (111 + 111 = 1110)
-  int nbits_sum = nbits_val + 1;
+
   printf("Adding values: %ld + %ld (%s + %s)\n", val1, val2,
          bin_str(val1, nbits_val).c_str(), bin_str(val2, nbits_val).c_str());
 
   // GENERATE AND RUN CIRCUIT
-  int_setter val1_setter{.val = val1};
-  int_setter val2_setter{.val = val2};
-  auto counts = cudaq::sample(run_adder{}, nbits_val, nbits_sum, val1_setter,
-                              val2_setter);
+  auto start = std::chrono::high_resolution_clock::now();
+
+  auto counts = cudaq::sample(run_adder{}, val1, val2);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Adder finished in %s.\n", format_time(duration).c_str());
   
   // REVIEW RESULTS
   std::string result = counts.most_probable();
+  printf("Full out: (%s)\n", result.c_str());
   std::string val2_out = result.substr(nbits_val, nbits_val);
   std::string sum_out = result.substr(2 * nbits_val, 1) + val2_out;
   printf("Sum: %d (%s)\n", bin_to_int(sum_out), sum_out.c_str());
