@@ -18,7 +18,6 @@
 #include <vector> // Lists of numbers
 #include <algorithm> // sort
 #include <chrono> // Timer
-#include <fstream> // Save circuit as QASM
 
 /****************** HELPER FUNCS ******************/
 // Convert value to binary string
@@ -168,31 +167,125 @@ __qpu__ void modular_exp_5_21(cudaq::qview<> exp, cudaq::qview<> work, const int
 struct demo_mod_exp {
   void operator()(const int max_iter) __qpu__ {
     auto qubits = cudaq::qvector(5);
-    // This needs some tinkering
     auto mod_multer = modular_mult_5_21{};
     x(qubits[0]);
     for (int i = 0; i < max_iter; ++i) {
-      // So does this
       mod_multer(qubits);
     }
   }
 };
 
 void run_mod_exp_demo(int shots, int iterations) {
-  // Draw circuit with one iteration, 200 shots
-  
-  // Sample said circuit
+  // Generate and run demo circuit
+  printf("\nRunning quantum mod exponentiation demo (x=%d)\n", iterations);
+  auto start = std::chrono::high_resolution_clock::now();
 
-  // Print results
+  auto counts = cudaq::sample(shots, demo_mod_exp{}, iterations);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Mod Exp Demo finished in %s.\n", format_time(duration).c_str());
+
+  // Print expected val
+  printf("For x = %d, 5^x mod 21 = %ld\n", 
+          iterations, 
+          ((long) pow(5, iterations) % 21));
 
   // Reverse bit order of most probable measured bit
-
-  // Convert to int and print
-
+  std::string result = counts.most_probable();
+  std::reverse(result.begin(), result.end()); 
+  // Print computed val
+  printf("For x = %d, computed result from demo is: %ld\n",
+          iterations, bin_to_int(result));
   return;
 }
 
-// TODO: Phase Kernel
+__qpu__ void modular_exp_4_21(cudaq::qview<> exp, cudaq::qview<> work) {
+  swap(exp[0], exp[2]);
+  // x = 1
+  x<cudaq::ctrl>(exp[2], work[1]);
+
+  // x = 2
+  x<cudaq::ctrl>(exp[1], work[1]);
+  x<cudaq::ctrl>(work[1], work[0]);
+  x<cudaq::ctrl>(exp[1], work[0], work[1]);
+  x<cudaq::ctrl>(work[1], work[0]);
+
+  // x = 4
+  x(work[1]);
+  x<cudaq::ctrl>(exp[0], work[1], work[0]);
+  x(work[1]);
+  x<cudaq::ctrl>(work[1], work[0]);
+  x<cudaq::ctrl>(exp[0], work[0], work[1]);
+  x<cudaq::ctrl>(work[1], work[0]);
+  swap(exp[0], exp[2]);
+}
+
+/**
+ * @brief Kernel to estimate the phase of the modular multiplication gate.
+ *        |x> U |y> = |x> |a*y mod 21> for a = 4 or 5
+ * @param nbits_ctrl The number of bits to allocate to the control register.
+ * @param nbits_work The number of bits to allocate to the work register.
+ * @param a The value for which we are now calculating periodicity.
+ * @param n The value we are trying to factor.
+ */
+struct phase_kernel {
+  __qpu__ auto operator()(const long nbits_ctrl, 
+                          const long nbits_work,
+                          const long a,
+                          const long n) {
+    // Initialize registers
+    cudaq::qvector qs(nbits_ctrl + nbits_work);
+    auto ctrl_reg = qs.front(nbits_ctrl);
+    auto work_reg = qs.back(nbits_work);
+
+    // Run ops
+    h(ctrl_reg);
+    if (a == 4 && n == 21) {
+      modular_exp_4_21(ctrl_reg, work_reg);
+    }
+    if (a == 5 && n == 21) {
+      modular_exp_5_21(ctrl_reg, work_reg, nbits_ctrl);
+    }
+    iqft(ctrl_reg);
+    mz(ctrl_reg);
+  }
+};
+
+void test_phase_kernel(long nbits_ctrl, 
+                       long nbits_work, 
+                       std::vector<long> a_vals, 
+                       uint idx, 
+                       long n, 
+                       int shots) {
+  // Validate inputs
+  if (a_vals[idx] != 4 && a_vals[idx] != 5) {
+    printf("Invalid 'a' val to phase kernel test\n");
+    return;
+  }
+  if (n != 21) {
+    printf("Invalid 'n' to phase kernel test\n");
+  }
+
+  // Test phase kernel
+  printf("\nTesting phase kernel...\n");
+  auto start = std::chrono::high_resolution_clock::now();
+  auto counts = cudaq::sample(shots, phase_kernel{}, nbits_ctrl, nbits_work, a_vals[idx], n);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Phase Kernel Test finished in %s.\n", format_time(duration).c_str());
+
+  printf("Measurement results for a=%ld and n=%ld with %ld qubits in ctrl register:\n", a_vals[idx], n, nbits_ctrl);
+  // Reverse bit order of most probable measured bit
+  std::string result = counts.most_probable();
+  std::reverse(result.begin(), result.end()); 
+  // Print computed val
+  printf("  %ld (%s)\n",
+          bin_to_int(result), result.c_str());
+
+}
+
 
 // TODO: Order from phase
 
@@ -300,7 +393,7 @@ std::vector<long> shors(long n, long initial, bool quantum) {
     divisor1 = gcd(a, n);
     if (divisor1 != 1) {
       divisor2 = n / divisor1;
-      return {divisor1, divisor2};
+      return {divisor1, divisor2, (long) attempts.size()};
     }
 
     // 3. Find the order of a mod N (i.e., r, where a^r = 1 (mod N))
@@ -318,11 +411,11 @@ std::vector<long> shors(long n, long initial, bool quantum) {
     std::vector<long> divisors = test_order(a, r, n);
     divisor1 = divisors[0]; divisor2 = divisors[1];
     if (divisor1 != 0) { // test_order returns {0, 0} if no factor found
-      return {divisor1, divisor2};
+      return {divisor1, divisor2, (long) attempts.size()};
     }
     attempts.push_back(a);
   }
-  return {-1, -1};
+  return {-1, -1, (long) attempts.size()};
 }
 
 int main(int argc, char *argv[]) {
@@ -339,18 +432,19 @@ int main(int argc, char *argv[]) {
   printf("Inputs:\n");
   printf("f1 = %ld\nf2 = %ld\nN = %ld\n",fact1, fact2, fact1*fact2);
   if (quantum) {
-    printf("(Quantum Implementation)\n");
+    printf("\n(Quantum Implementation)\n");
   } else {
-    printf("(Classical Implementation)\n");
+    printf("\n(Classical Implementation)\n");
   }
   printf("Running Shor's...\n");
 
   auto start = std::chrono::high_resolution_clock::now();
-  std::vector<long> factors = shors(fact1*fact2, initial_val, false);
+  std::vector<long> factors = shors(fact1*fact2, initial_val, quantum);
   auto end = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
   printf("Shor's finished in %s.\n", format_time(duration).c_str());
+  printf("%ld attempt(s)\n", factors[2]);
   printf("Output:\n");
   if (factors[0] == -1) {
     printf("No factors found\n");
@@ -359,5 +453,9 @@ int main(int argc, char *argv[]) {
     printf("Factor 2: %ld\n", factors[1]);
     printf("Product: %ld\n", factors[0]*factors[1]);
   }
+
+  printf("--Demos--\n");
+  run_mod_exp_demo(200, 2);
+  test_phase_kernel(3, 5, {4, 5}, 1, 21, 15000);
   return 0;
 }
