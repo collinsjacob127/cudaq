@@ -19,12 +19,14 @@
 #include <algorithm> // sort
 #include <chrono> // Timer
 
+#include "fractionizer.h" // Temporary CF solution
+
 /****************** HELPER FUNCS ******************/
 // Convert value to binary string
 template <typename T>
-std::string bin_str(T val, int nbits) {
+std::string bin_str(T val, T nbits) {
   std::stringstream ss;
-  for (int i = 1; i <= nbits; ++i) {
+  for (T i = 1; i <= nbits; ++i) {
     // Shift through the bits in val
     auto target_bit_set = (1 << (nbits - i)) & val;
     // Add matching val to string
@@ -64,22 +66,22 @@ long bin_to_int(std::string &s) {
 
 // Convert an array to a string
 template <typename T>
-std::string arrayToString(std::vector<T> arr, bool binary, int nbits) {
+std::string arrayToString(std::vector<T> arr) {
   std::stringstream ss;
-  if (binary) {
-    for (int i = 0; i < arr.size(); i++) {
-      ss << bin_str(arr[i], nbits);
-      if (i < arr.size() - 1) {
-        ss << ", ";
-        ;
-      }
-    }
-  } else {
-    ss << arr[0];
-    for (int i = 1; i < arr.size(); i++) {
-      ss << ", " << arr[i];
-    }
+  // if (binary) {
+  //   for (T i = 0; i < arr.size(); i++) {
+  //     ss << bin_str(arr[i], nbits);
+  //     if (i < arr.size() - 1) {
+  //       ss << ", ";
+  //       ;
+  //     }
+  //   }
+  // } else {
+  ss << arr[0];
+  for (T i = 1; i < arr.size(); i++) {
+    ss << ", " << arr[i];
   }
+  // }
   return ss.str();
 }
 
@@ -286,12 +288,65 @@ void test_phase_kernel(long nbits_ctrl,
 
 }
 
+/**
+ * @brief Find the order of a mod N. Needs to be updated to
+ *        use continued fractions (CF).
+ * @param phase Integer result from the phase estimate of U|x> = ax mod N
+ * @param nbits Number of qubits used to estimate the phase.
+ * @param a Either 4 or 5, in this demo
+ * @param N The number being factored. In this demo it's 21.
+ * @return Integer period of a mod N if found, otherwise -1.
+ */
+int get_order_from_phase(int phase, int nbits, int a, int n) {
+  if (nbits <= 0 || a <= 0 || n <= 0) {
+    // invalid input
+    return -1;
+  }
 
-// TODO: Order from phase
+  long double num, denom;
+  long double eigenphase = (long double) phase / (long double) pow(2, nbits);
+  auto seq = Fractionizer::fractionize(eigenphase, num, denom);
+  if (num == (long double) 1) {
+    printf("Numerator was initially 1. Exiting order from phase.\n");
+    return -1;
+  }
+  eigenphase = num / denom;
+  printf("Eigenphase is %Lf\n", eigenphase);
+  printf("Sequence: %s", arrayToString(seq).c_str());
+  for (auto &r : seq) {
+    printf("Using denoms of fractions in convergent sequence, testing order = %Lf", r);
+    if ((int) pow(a, r) % n == 1) {
+      printf("Found order: %Lf\n", r);
+      return r;
+    }
+  }
+  return -1;
+}
 
-// TODO: Find Order
-
+/**
+ * @brief The quantum algorithm to find the order of a mod N, when x = 4 or x = 5 and N = 21.
+ * @param a Integer, 4 or 5 
+ * @param n Number to be factored; 21.
+ * @return Int the period if it is found, or -1 if no period is found.
+ */
 long find_order_quantum(long a, long n) {
+  if ((a != 4 && a != 5) || n != 21) {
+    return -1;
+  }
+  int shots = 15000;
+  int nbits_ctrl, nbits_work;
+  if (a == 4) {
+    nbits_ctrl = 3;
+    nbits_work = 2;
+  }
+  if (a == 5) {
+    nbits_ctrl = 5;
+    nbits_work = 5;
+  }
+  auto counts = cudaq::sample(shots, phase_kernel{}, nbits_ctrl, nbits_work, a, n);
+  counts.dump();
+
+  //TODO: Filter output values and find most probable VALID output
   return -1;
 }
 

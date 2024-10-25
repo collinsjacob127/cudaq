@@ -15,6 +15,23 @@
 #include <iostream>
 #include <bitset>
 
+// Convert value to binary string
+template <typename T>
+std::string bin_str(T val, int nbits) {
+  std::stringstream ss;
+  for (int i = 1; i <= nbits; ++i) {
+    // Shift through the bits in val
+    auto target_bit_set = (1 << (nbits - i)) & val;
+    // Add matching val to string
+    if (target_bit_set) {
+      ss << '1';
+    } else {
+      ss << '0';
+    }
+  }
+  return ss.str();
+}
+
 __qpu__ void reflect_about_uniform(cudaq::qvector<> &qs) {
   auto ctrlQubits = qs.front(qs.size() - 1);
   auto &lastQubit = qs.back();
@@ -108,7 +125,7 @@ int main(int argc, char *argv[]) {
   // Helpful output
   std::cout << "Search vals: " << arrayToString(search_vals, true, nbits_val) << std::endl;
   std::cout << "Index vals: " << arrayToString(index_vals, true, nbits_index) << std::endl;
-  printf("Secret: %ld\n", secret);
+  printf("Secret: %ld (%s)\n", secret, bin_str(secret, nbits).c_str());
   printf("Nbits: %d\n", nbits);
   
   // Generate Circuits and run
