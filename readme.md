@@ -10,14 +10,20 @@ Contact Info: Jacob Collins | jbcollins@csuchico.edu
 
 - [x] Python starter code
 - [x] C++ Starter code
+  - [x] Adder
+  - [x] Adder skeleton
 - [ ] Generalize Shor's
     - [x] C++ Implementation for better data types
     - [x] Int -> Bit initialization
     - [x] Adder
-    - [ ] Mult
-    - [ ] Exp
-    - [ ] Mod
+    - [x] Mult
+    - [x] Exp
+    - [x] Mod
+    - [x] ContFrac C++ Equivalent
+      - [ ] MPIR Dependancy
     - [ ] Phase
+      - [x] Imprecise 
+      - [ ] Using CF
 - [ ] Update Grover's
     - [ ]  Add Key register
     - [x]  MCT
