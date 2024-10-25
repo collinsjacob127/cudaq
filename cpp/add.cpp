@@ -89,7 +89,7 @@ int bin_to_int(std::string &s) {
 /****************** CUDAQ FUNCS ******************/
 
 // Apply NOT-gates in accordance with bit-pattern of given integer.
-__qpu__ void set_int(const long val, cudaq::qvector<> &qs) {
+__qpu__ void set_int(const long val, cudaq::qview<> qs) {
   // Iterate through bits in val
   for (int i = 1; i <= qs.size(); ++i) {
     // Bit-shift for single bitwise AND to apply X on correct qubits
@@ -103,8 +103,8 @@ __qpu__ void set_int(const long val, cudaq::qvector<> &qs) {
 
 // Bitwise addition of v_reg1 and v_reg2.
 // Output is {c_reg[0], v_reg2}
-__qpu__ void add(cudaq::qvector<> &v_reg1, cudaq::qvector<> &v_reg2,
-                 cudaq::qvector<> &c_reg) {
+__qpu__ void add(cudaq::qview<> v_reg1, cudaq::qview<> v_reg2,
+                 cudaq::qview<> c_reg) {
   const int nbits_v = v_reg1.size();
 
   // Store all the carries in c_reg

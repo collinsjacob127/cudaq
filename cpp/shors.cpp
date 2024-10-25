@@ -1,34 +1,43 @@
-// Author: Jacob Collins
-// Compile and run with:
-// ```
-// nvq++ grover.cpp -o grover.x && ./grover.x
-// ```
+/**
+ * Author: Jacob Collins
+ * Description: An example implementation of Shor's Algorithm
+ * Instructions:
+ *   Make:
+ *     $ make shors
+ *     OR
+ *     $ nvq++ shors.cpp -o shors.o
+ *   Run: 
+ *     ./shors.o
+ */
 
-// Base includes
 #include <cudaq.h>
-
-#include <cmath>
-#include <numbers>
-// Custom includes
-#include <bitset>
-#include <iostream>
-#include <numeric>
-#include <random>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <chrono>
+#include <iostream> // Terminal output
+#include <random> // Get a random number
+#include <sstream> //String formatting
+#include <string> // Strings are good
+#include <vector> // Lists of numbers
+#include <algorithm> // sort
+#include <chrono> // Timer
+#include <fstream> // Save circuit as QASM
 
 /****************** HELPER FUNCS ******************/
 // Convert value to binary string
 template <typename T>
-std::string bin_str(T v, int nbits) {
+std::string bin_str(T val, int nbits) {
   std::stringstream ss;
-  ss << std::bitset<sizeof(T) * 8>(v).to_string().substr(sizeof(T) * 8 - nbits,
-                                                         nbits);
+  for (int i = 1; i <= nbits; ++i) {
+    // Shift through the bits in val
+    auto target_bit_set = (1 << (nbits - i)) & val;
+    // Add matching val to string
+    if (target_bit_set) {
+      ss << '1';
+    } else {
+      ss << '0';
+    }
+  }
   return ss.str();
 }
+
 
 // Return max value in an array
 template <typename T>
@@ -60,8 +69,7 @@ std::string arrayToString(std::vector<T> arr, bool binary, int nbits) {
   std::stringstream ss;
   if (binary) {
     for (int i = 0; i < arr.size(); i++) {
-      ss << std::bitset<sizeof(long) * 8>(arr[i]).to_string().substr(
-          sizeof(T) * 8 - nbits, nbits);
+      ss << bin_str(arr[i], nbits);
       if (i < arr.size() - 1) {
         ss << ", ";
         ;
@@ -85,7 +93,6 @@ std::string to_string(T value) {
 
 // Convert nanoseconds to a string displaying subdivisions of time
 std::string format_time(long long nanoseconds) {
-    
     long long milliseconds = nanoseconds / 1'000'000;  // From ns to ms
     long long seconds = milliseconds / 1'000;          // From ms to seconds
     milliseconds = milliseconds % 1'000;               // Remaining milliseconds
@@ -101,93 +108,89 @@ std::string format_time(long long nanoseconds) {
            to_string(remaining_nanoseconds) + "ns";
 }
 
-/************** QUANTUM ***************/
-__qpu__ void reflect_about_uniform(cudaq::qvector<> &qs) {
-  auto ctrlQubits = qs.front(qs.size() - 1);
-  auto &lastQubit = qs.back();
+/***************************************
+*************** QUANTUM ****************
+***************************************/
 
-  // Compute (U) Action (V) produces
-  // U V U::Adjoint
-  cudaq::compute_action(
-      [&]() {
-        h(qs);
-        x(qs);
-      },
-      [&]() { z<cudaq::ctrl>(ctrlQubits, lastQubit); });
-}
+//  Inverse Quantum Fourier Transform
+// This is straight from a NVIDIA example program
+__qpu__ void iqft(cudaq::qview<> q) {
+  int N = q.size();
+  // Swap qubits
+  for (int i = 0; i < N / 2; ++i) {
+    swap(q[i], q[N - i - 1]);
+  }
 
-struct run_grover {
-  template <typename CallableKernel>
-  __qpu__ auto operator()(const int n_qubits, CallableKernel &&oracle) {
-    int n_iterations = round(0.25 * std::numbers::pi * sqrt(2 ^ n_qubits));
-
-    cudaq::qvector qs(n_qubits);
-    h(qs);
-    for (int i = 0; i < n_iterations; i++) {
-      oracle(qs);
-      reflect_about_uniform(qs);
+  for (int i = 0; i < N - 1; ++i) {
+    h(q[i]);
+    int j = i + 1;
+    for (int y = i; y >= 0; --y) {
+      double denom = (1UL << (j - y));
+      const double theta = -M_PI / denom;
+      r1<cudaq::ctrl>(theta, q[j], q[y]);
     }
-    mz(qs);
   }
-};
 
-struct oracle {
-  const long target_state;
-  const std::vector<long> arr;
-
-  void operator()(cudaq::qvector<> &qs) __qpu__ {
-    cudaq::compute_action(
-        // Define good search state (secret)
-        [&]() {
-          for (int i = 1; i <= qs.size(); ++i) {
-            auto target_bit_set = (1 << (qs.size() - i)) & target_state;
-            if (!target_bit_set) x(qs[i - 1]);
-          }
-        },
-        // Controlled z, sends search result to tgt bit
-        [&]() {
-          auto ctrlQubits = qs.front(qs.size() - 1);
-          z<cudaq::ctrl>(ctrlQubits, qs.back());
-        });
-  }
-};
-
-// TODO: Quantum Fourier Transform
-//  Test that what I wrote here works
-__qpu__ void quantum_fourier_transform(cudaq::qvector<> &qs, bool inverse) {
-  int N = qs.size();
-  cudaq::compute_action(
-      // Swap qubits if inverse true
-      [&]() {
-        if (inverse) {
-          for (int i = 0; i < N / 2; ++i) {
-            swap(qs[i], qs[N - i - 1]);
-          }
-        }
-      },
-      // Apply QFT
-      [&]() {
-        for (int i = 0; i < N - 1; ++i) {
-          h(qs[i]);
-          int j = i + 1;
-          for (int y = i; y >= 0; --y) {
-            double denom = (1UL << (j - y));
-            const double theta = -M_PI / denom;
-            r1<cudaq::ctrl>(theta, qs[j], qs[y]);
-          }
-        }
-      });
-  h(qs[N - 1]);  // Python qft didn't have this, hmm
+  h(q[N - 1]);
 }
 
-// TODO: Test Order
-//  We have test order in py
+// "Modular" mult - Copied from Nvidia shors.ipynb
+struct modular_mult_5_21 {
+  void operator()(cudaq::qview<> work) __qpu__ {
+    /* Kernel for multiplying by 5 mod 21
+    * based off of the circuit diagram in
+    * https://physlab.org/wp-content/uploads/2023/05/Shor_s_Algorithm_23100113_Fin.pdf
+    * Modifications were made to change the ordering of the qubits
+    */
+    x(work[0]);
+    x(work[2]);
+    x(work[4]);
 
-// TODO: Modular Mult
-//  We have modular mult example with 5 and 21 in py
+    swap(work[0], work[4]);
+    swap(work[0], work[2]);
+  }
+};
 
-// TODO: Modular Exp
-//  We have modular exp example with 5 and 21 in py
+// "Modular" Exp - Copied from Nvidia shors.ipynb
+__qpu__ void modular_exp_5_21(cudaq::qview<> exp, cudaq::qview<> work, const int control_size) {
+  /* Controlled modular exponentiation kernel used in Shor's algorithm
+   * |x> U^x |y> = |x> |(5^x)y mod 21>
+   */
+  x(work[0]);
+  for (int i = 0; i < control_size; ++i) {
+    for (int j = 0; j < pow(2, i); ++j) {
+      // https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/synthesis.html
+      cudaq::control(modular_mult_5_21{}, exp[i], work);
+    }
+  }
+}
+
+struct demo_mod_exp {
+  void operator()(const int max_iter) __qpu__ {
+    auto qubits = cudaq::qvector(5);
+    // This needs some tinkering
+    auto mod_multer = modular_mult_5_21{};
+    x(qubits[0]);
+    for (int i = 0; i < max_iter; ++i) {
+      // So does this
+      mod_multer(qubits);
+    }
+  }
+};
+
+void run_mod_exp_demo(int shots, int iterations) {
+  // Draw circuit with one iteration, 200 shots
+  
+  // Sample said circuit
+
+  // Print results
+
+  // Reverse bit order of most probable measured bit
+
+  // Convert to int and print
+
+  return;
+}
 
 // TODO: Phase Kernel
 
@@ -199,6 +202,11 @@ long find_order_quantum(long a, long n) {
   return -1;
 }
 
+/*****************************************
+*************** CLASSICAL ****************
+*****************************************/
+
+// 
 long find_order_classical(long a, long n) {
   if (a <= 1 || a >= n) {
     printf("Bad input to find_order_classical\n");
@@ -207,6 +215,7 @@ long find_order_classical(long a, long n) {
   long r = 1;
   long y = a;
   while (y != 1) {
+    // printf("y: %ld a: %ld, n: %ld, y * a %% n: %ld\n", y, a, n, y * a % n);
     y = y * a % n;
     r++;
   }
@@ -266,6 +275,10 @@ std::vector<long> test_order(long a, long r, long n) {
   }
   return {0, 0};
 }
+
+/**************************************
+*************** DRIVER ****************
+**************************************/
 
 std::vector<long> shors(long n, long initial, bool quantum) {
   // Handle even numbers
