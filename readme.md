@@ -6,6 +6,10 @@ Repo Link: [https://github.com/collinsjacob127/cudaq](https://github.com/collins
 
 Contact Info: Jacob Collins | jbcollins@csuchico.edu
 
+## Installation Instructions
+
+Read [setup.md](setup.md)
+
 ## TO-DO:
 
 - [x] Python starter code
@@ -29,6 +33,3 @@ Contact Info: Jacob Collins | jbcollins@csuchico.edu
     - [x]  MCT
     - [ ]  Move to CudaQ
 
-## Installation Instructions
-
-Read [setup.md](setup.md)
