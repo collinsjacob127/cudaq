@@ -260,8 +260,7 @@ struct run_alg {
     // 2. Initialize Registers
     // cudaq::qvector v_reg1(nbits_val);  // Value 1 reg
     // cudaq::qvector v_reg2(nbits_val);  // Value 2 reg
-    cudaq::qvector v_reg(2*nbits_val);  // Values reg
-    // cudaq::qvector v_reg3(nbits_val);  // Temp until better sum op found
+    cudaq::qvector v_reg(2*nbits_val);  // Values reg. Both 'input' values are stored here.
     cudaq::qvector c_reg(nbits_sum);   // Sum reg
     cudaq::qvector tgt(1);
     adder add_op{.nbits_v = static_cast<int>(nbits_val)};
@@ -317,6 +316,8 @@ int main(int argc, char *argv[]) {
   printf("Finding sum components of: %ld (%s)\n", 
           search_sum, bin_str(search_sum, nbits).c_str());
   printf("Using %d simulated qubits.\n", nbits*3+1);
+  int n_grov_iter = (0.785398) * sqrt(pow(2, nbits-1)*(pow(2, nbits-1))/search_sum);
+  printf("Grover's requires %d iterations in this case.\n", n_grov_iter);
 
   // GENERATE AND RUN CIRCUIT
   auto start = std::chrono::high_resolution_clock::now(); // Timer start
