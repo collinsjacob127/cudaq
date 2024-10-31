@@ -2,6 +2,33 @@
  * Description: Using Grover's search to find integer 
  *              components that sum to a given value.
  * Author: Jacob Collins
+ * Usage:
+ * >$ make inverse_add
+ * >$ ./inverse_add.o [sum_dec_or_bin] [n_res_to_show]
+ * 
+ * Examples:
+ * >$ ./inverse_add.o 
+ *    Finding sum components of: 15
+ *    ...
+ * 
+ * >$ ./inverse_add.o 20
+ *   Finding sum components of: 20 (10100)
+ *   Q-Alg finished in 7s 139ms 696µs 940ns.
+ *   6 + 14 = 20 (5.45%)
+ *   11 + 9 = 20 (5.35%)
+ *   ...
+ *   10 + 10 = 20 (4.20%)
+ *   8 + 12 = 20 (4.15%)
+ *   2000 / 2000 Correct. (100.00%)
+ * 
+ * >$ ./inverse_add.o 31 3
+ *   Finding sum components of: 31 (11111)
+ *   Q-Alg finished in 5s 963ms 167µs 620ns.
+ *   30 + 1 = 31 (4.20%)
+ *   24 + 7 = 31 (4.15%)
+ *   20 + 11 = 31 (4.10%)
+ *   More results hidden...
+ *   1998 / 2000 Correct. (99.90%)
  **********************************/
 #include <cudaq.h>
 
@@ -282,11 +309,14 @@ int main(int argc, char *argv[]) {
     } else {
       printf("Search value must be given as binary or decimal\n");
     }
+  } else {
+    printf("A number to find sum components of may be passed as an argument in decimal or binary\n");
   }
   // Necessary # bits computed based on input. Min 1.
   int nbits = ceil(log2(max(std::vector<long>({search_sum, 1})) + 1));
   printf("Finding sum components of: %ld (%s)\n", 
           search_sum, bin_str(search_sum, nbits).c_str());
+  printf("Using %d simulated qubits.\n", nbits*3+1);
 
   // GENERATE AND RUN CIRCUIT
   auto start = std::chrono::high_resolution_clock::now(); // Timer start
@@ -303,6 +333,11 @@ int main(int argc, char *argv[]) {
   // Converting to sorted vector of tuples
   std::vector<std::tuple<std::string, size_t>> results = sort_map_by_value_descending(counts.to_map());
   size_t total_correct = 0;
+  long n_printed = results.size();
+  int i = 0;
+  if (argc >= 3) {
+    n_printed = strtol(argv[2], nullptr, 10);
+  }
   for (const auto& item : results) {
     // Binary result string
     std::string result = std::get<0>(item);
@@ -317,10 +352,16 @@ int main(int argc, char *argv[]) {
     if (val1 + val2 == search_sum) {
       total_correct += count;
     }
-    printf("%d + %d = %d (%.2f%%)\n", bin_to_int(val1_out), bin_to_int(val2_out), 
-            bin_to_int(val1_out) + bin_to_int(val2_out), (float) 100 * count / n_shots);
-    // printf("Val1: %d (%s)\n", bin_to_int(val1_out), val1_out.c_str());
-    // printf("Val2: %d (%s)\n", bin_to_int(val2_out), val2_out.c_str());
+    if (i < n_printed) {
+      printf("%d + %d = %d (%.2f%%)\n", bin_to_int(val1_out), bin_to_int(val2_out), 
+              bin_to_int(val1_out) + bin_to_int(val2_out), (float) 100 * count / n_shots);
+      // printf("Val1: %d (%s)\n", bin_to_int(val1_out), val1_out.c_str());
+      // printf("Val2: %d (%s)\n", bin_to_int(val2_out), val2_out.c_str());
+    }
+    i++;
+  }
+  if (n_printed < results.size()) {
+    printf("More results hidden...\n");
   }
   // The percentage of results that were correct.
   printf("%lu / %d Correct. (%.2f%%)\n", total_correct, n_shots, (float) 100 * total_correct / n_shots);
